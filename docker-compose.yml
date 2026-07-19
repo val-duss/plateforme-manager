@@ -1,0 +1,16 @@
+services:
+  app:
+    build: .
+    image: plateforme-manager:latest
+    container_name: plateforme-manager
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_PATH=/data/app.db
+      - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
+    volumes:
+      - plateforme_data:/data
+    restart: unless-stopped
+
+volumes:
+  plateforme_data:

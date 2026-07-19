@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}{{ "Modifier" if platform else "Nouvelle" }} plateforme — Plateforme Manager{% endblock %}
+{% block content %}
+  {% if platform %}
+    <div class="breadcrumb"><a href="{{ url_for('main.platform_detail', platform_id=platform.id) }}">← {{ platform.name }}</a></div>
+  {% else %}
+    <div class="breadcrumb"><a href="{{ url_for('main.index') }}">← Plateformes</a></div>
+  {% endif %}
+
+  <h1>{{ "Modifier la plateforme" if platform else "Nouvelle plateforme" }}</h1>
+
+  {% set data = form_data if form_data is not none else platform %}
+  <form class="card" method="post">
+    <div class="form-grid">
+      <div class="field">
+        <label for="name">Nom de la plateforme *</label>
+        <input type="text" id="name" name="name" required value="{{ data.name if data else '' }}">
+      </div>
+      <div class="field">
+        <label for="client_name">Nom du client *</label>
+        <input type="text" id="client_name" name="client_name" required value="{{ data.client_name if data else '' }}">
+      </div>
+      <div class="field">
+        <label for="description">Description</label>
+        <textarea id="description" name="description">{{ data.description if data else '' }}</textarea>
+      </div>
+      <div class="actions">
+        <button class="btn btn-primary" type="submit">Enregistrer</button>
+        <a class="btn" href="{{ url_for('main.platform_detail', platform_id=platform.id) if platform else url_for('main.index') }}">Annuler</a>
+      </div>
+    </div>
+  </form>
+{% endblock %}

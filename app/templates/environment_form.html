@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% block title %}{{ "Environnement" if environment else "Nouvel environnement" }} — {{ platform.name }}{% endblock %}
+{% block content %}
+  <div class="breadcrumb"><a href="{{ url_for('main.platform_detail', platform_id=platform.id) }}">← {{ platform.name }}</a></div>
+
+  <h1>{{ "Modifier l'environnement" if environment else "Nouvel environnement" }}</h1>
+
+  {% set data = form_data if form_data is not none else environment %}
+  <form class="card" method="post"
+        action="{{ url_for('main.environment_edit', environment_id=environment.id) if environment else url_for('main.environment_new', platform_id=platform.id) }}">
+    <div class="form-grid">
+      <div class="form-row">
+        <div class="field">
+          <label for="env_type">Type d'environnement *</label>
+          <select id="env_type" name="env_type" required>
+            {% for value in env_types.ALL %}
+              <option value="{{ value }}" {{ "selected" if data and data.env_type == value else "" }}>{{ env_types.LABELS[value] }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="infra_kind">Type d'infrastructure *</label>
+          <select id="infra_kind" name="infra_kind" required {{ "disabled" if environment else "" }}>
+            {% for value in infra_kinds.ALL %}
+              <option value="{{ value }}" {{ "selected" if data and data.infra_kind == value else "" }}>{{ infra_kinds.LABELS[value] }}</option>
+            {% endfor %}
+          </select>
+          {% if environment %}
+            <input type="hidden" name="infra_kind" value="{{ environment.infra_kind }}">
+            <p class="hint">Pour changer le type d'infrastructure (et réinitialiser le sizing), supprimez puis recréez l'environnement.</p>
+          {% endif %}
+        </div>
+      </div>
+      <div class="field">
+        <label for="notes">Notes</label>
+        <textarea id="notes" name="notes">{{ data.notes if data else '' }}</textarea>
+      </div>
+      <div class="actions">
+        <button class="btn btn-primary" type="submit">Enregistrer</button>
+        <a class="btn" href="{{ url_for('main.platform_detail', platform_id=platform.id) }}">Retour à la plateforme</a>
+      </div>
+    </div>
+  </form>
+
+  {% if environment %}
+    <div class="section">
+      <h2>Sizing — {{ infra_kinds.LABELS[environment.infra_kind] }}</h2>
+
+      {% if environment.infra_kind == infra_kinds.VM %}
+        <div class="card" style="padding:0; overflow-x:auto;">
+          <table>
+            <thead>
+              <tr><th>Nom</th><th>Rôle</th><th>vCPU</th><th>RAM (Go)</th><th>Stockage (Go)</th><th></th></tr>
+            </thead>
+            <tbody>
+              {% for vm in environment.vm_sizings %}
+                <tr>
+                  <td>{{ vm.name }}</td>
+                  <td>{{ vm.role or "—" }}</td>
+                  <td>{{ vm.cpu_cores }}</td>
+                  <td>{{ vm.ram_gb }}</td>
+                  <td>{{ vm.storage_gb }}</td>
+                  <td>
+                    <form class="inline-form" method="post" action="{{ url_for('main.vm_delete', vm_id=vm.id) }}"
+                          onsubmit="return confirm('Supprimer cette VM ?');">
+                      <button type="submit" class="btn btn-danger btn-sm">Suppr.</button>
+                    </form>
+                  </td>
+                </tr>
+              {% else %}
+                <tr><td colspan="6" class="muted">Aucune VM renseignée.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <form class="card" method="post" action="{{ url_for('main.vm_add', environment_id=environment.id) }}">
+          <h3>Ajouter une machine virtuelle</h3>
+          <div class="form-row">
+            <div class="field">
+              <label for="vm_name">Nom *</label>
+              <input type="text" id="vm_name" name="name" required placeholder="app-srv-01">
+            </div>
+            <div class="field">
+              <label for="vm_role">Rôle</label>
+              <input type="text" id="vm_role" name="role" placeholder="application, base de données...">
+            </div>
+            <div class="field">
+              <label for="vm_cpu">vCPU *</label>
+              <input type="number" id="vm_cpu" name="cpu_cores" min="0" step="1" required>
+            </div>
+            <div class="field">
+              <label for="vm_ram">RAM (Go) *</label>
+              <input type="number" id="vm_ram" name="ram_gb" min="0" step="0.5" required>
+            </div>
+            <div class="field">
+              <label for="vm_storage">Stockage (Go) *</label>
+              <input type="number" id="vm_storage" name="storage_gb" min="0" step="1" required>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="btn btn-primary" type="submit">Ajouter la VM</button>
+          </div>
+        </form>
+
+      {% elif environment.infra_kind == infra_kinds.K8S %}
+        {% set k = environment.k8s_sizing %}
+        <form class="card" method="post" action="{{ url_for('main.k8s_update', environment_id=environment.id) }}">
+          <div class="form-row">
+            <div class="field">
+              <label for="node_count">Nombre de nœuds *</label>
+              <input type="number" id="node_count" name="node_count" min="0" step="1" required value="{{ k.node_count if k else 0 }}">
+            </div>
+            <div class="field">
+              <label for="cpu_per_node">vCPU par nœud *</label>
+              <input type="number" id="cpu_per_node" name="cpu_per_node" min="0" step="0.5" required value="{{ k.cpu_per_node if k else 0 }}">
+            </div>
+            <div class="field">
+              <label for="ram_per_node_gb">RAM par nœud (Go) *</label>
+              <input type="number" id="ram_per_node_gb" name="ram_per_node_gb" min="0" step="0.5" required value="{{ k.ram_per_node_gb if k else 0 }}">
+            </div>
+            <div class="field">
+              <label for="storage_total_gb">Stockage total du cluster (Go) *</label>
+              <input type="number" id="storage_total_gb" name="storage_total_gb" min="0" step="1" required value="{{ k.storage_total_gb if k else 0 }}">
+            </div>
+          </div>
+          <div class="actions">
+            <button class="btn btn-primary" type="submit">Enregistrer le sizing</button>
+          </div>
+        </form>
+
+      {% elif environment.infra_kind == infra_kinds.AWS %}
+        {% set a = environment.aws_sizing %}
+        <form class="card" method="post" action="{{ url_for('main.aws_update', environment_id=environment.id) }}">
+          <p class="hint">Environnement AWS natif — détails de sizing à affiner ultérieurement.</p>
+          <div class="form-row">
+            <div class="field">
+              <label for="region">Région</label>
+              <input type="text" id="region" name="region" placeholder="eu-west-1" value="{{ a.region if a else '' }}">
+            </div>
+            <div class="field">
+              <label for="account_id">Compte AWS</label>
+              <input type="text" id="account_id" name="account_id" placeholder="123456789012" value="{{ a.account_id if a else '' }}">
+            </div>
+          </div>
+          <div class="field">
+            <label for="aws_notes">Notes de sizing</label>
+            <textarea id="aws_notes" name="notes">{{ a.notes if a else '' }}</textarea>
+          </div>
+          <div class="actions">
+            <button class="btn btn-primary" type="submit">Enregistrer</button>
+          </div>
+        </form>
+      {% endif %}
+    </div>
+  {% endif %}
+{% endblock %}

@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Journal — Plateforme Manager{% endblock %}
+{% block content %}
+  <div class="page-header">
+    <div>
+      <h1>Journal des opérations</h1>
+      <p class="subtitle">Toutes plateformes confondues, les 300 dernières opérations.</p>
+    </div>
+  </div>
+
+  {% if operations %}
+    <div class="card" style="padding:0; overflow-x:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Plateforme</th>
+            <th>Type</th>
+            <th>Titre</th>
+            <th>Environnement</th>
+            <th>Par</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for op in operations %}
+            <tr>
+              <td>{{ op.performed_at.strftime('%d/%m/%Y %H:%M') }}</td>
+              <td><a href="{{ url_for('main.platform_detail', platform_id=op.platform_id) }}">{{ op.platform.name }}</a></td>
+              <td><span class="badge badge-op">{{ operation_types.LABELS[op.operation_type] }}</span></td>
+              <td>
+                {{ op.title }}
+                {% if op.description %}<div class="muted small">{{ op.description }}</div>{% endif %}
+              </td>
+              <td>
+                {% if op.environment %}
+                  <span class="badge badge-{{ op.environment.env_type }}">{{ EnvType.LABELS[op.environment.env_type] }}</span>
+                {% else %}
+                  <span class="muted small">Plateforme entière</span>
+                {% endif %}
+              </td>
+              <td>{{ op.performed_by or "—" }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="card empty-state">
+      <p>Aucune opération enregistrée pour le moment.</p>
+    </div>
+  {% endif %}
+{% endblock %}

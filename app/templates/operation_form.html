@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Nouvelle opération — {{ platform.name }}{% endblock %}
+{% block content %}
+  <div class="breadcrumb"><a href="{{ url_for('main.platform_detail', platform_id=platform.id) }}">← {{ platform.name }}</a></div>
+
+  <h1>Nouvelle opération</h1>
+  <p class="subtitle">Tracez une installation, une maintenance, un changement de sizing, une récupération de logs ou un incident.</p>
+
+  <form class="card" method="post">
+    <div class="form-grid">
+      <div class="form-row">
+        <div class="field">
+          <label for="operation_type">Type d'opération *</label>
+          <select id="operation_type" name="operation_type" required>
+            {% for value in operation_types.ALL %}
+              <option value="{{ value }}" {{ "selected" if form_data and form_data.operation_type == value else "" }}>{{ operation_types.LABELS[value] }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="environment_id">Environnement concerné</label>
+          <select id="environment_id" name="environment_id">
+            <option value="">Plateforme entière</option>
+            {% for env in platform.environments %}
+              <option value="{{ env.id }}" {{ "selected" if form_data and form_data.get('environment_id') == env.id|string else "" }}>
+                {{ EnvType.LABELS[env.env_type] }} — {{ InfraKind.LABELS[env.infra_kind] }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="title">Titre *</label>
+        <input type="text" id="title" name="title" required placeholder="Ex : montée de version applicative"
+               value="{{ form_data.title if form_data else '' }}">
+      </div>
+
+      <div class="field">
+        <label for="description">Description</label>
+        <textarea id="description" name="description">{{ form_data.description if form_data else '' }}</textarea>
+      </div>
+
+      <div class="form-row">
+        <div class="field">
+          <label for="performed_by">Réalisé par</label>
+          <input type="text" id="performed_by" name="performed_by" value="{{ form_data.performed_by if form_data else '' }}">
+        </div>
+        <div class="field">
+          <label for="performed_at">Date et heure</label>
+          <input type="datetime-local" id="performed_at" name="performed_at" value="{{ form_data.performed_at if form_data else '' }}">
+          <p class="hint">Laisser vide pour utiliser la date/heure actuelle.</p>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-primary" type="submit">Enregistrer dans le journal</button>
+        <a class="btn" href="{{ url_for('main.platform_detail', platform_id=platform.id) }}">Annuler</a>
+      </div>
+    </div>
+  </form>
+{% endblock %}

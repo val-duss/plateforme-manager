@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Plateformes — Plateforme Manager{% endblock %}
+{% block content %}
+  <div class="page-header">
+    <div>
+      <h1>Plateformes</h1>
+      <p class="subtitle">Inventaire des plateformes informatiques et de leurs environnements.</p>
+    </div>
+    <a class="btn btn-primary" href="{{ url_for('main.platform_new') }}">+ Nouvelle plateforme</a>
+  </div>
+
+  {% if platforms %}
+    <div class="card-list">
+      {% for platform in platforms %}
+        <a class="card platform-card" href="{{ url_for('main.platform_detail', platform_id=platform.id) }}">
+          <h3>{{ platform.name }}</h3>
+          <p class="client">Client : {{ platform.client_name }}</p>
+          <div class="tag-row">
+            {% if platform.environments %}
+              {% for env in platform.environments %}
+                <span class="badge badge-{{ env.env_type }}">{{ EnvType.LABELS[env.env_type] }}</span>
+              {% endfor %}
+            {% else %}
+              <span class="muted small">Aucun environnement</span>
+            {% endif %}
+          </div>
+        </a>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="card empty-state">
+      <p>Aucune plateforme enregistrée pour le moment.</p>
+      <a class="btn btn-primary" href="{{ url_for('main.platform_new') }}">Créer la première plateforme</a>
+    </div>
+  {% endif %}
+{% endblock %}

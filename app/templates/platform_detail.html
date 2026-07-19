@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}{{ platform.name }} — Plateforme Manager{% endblock %}
+{% block content %}
+  <div class="breadcrumb"><a href="{{ url_for('main.index') }}">← Plateformes</a></div>
+
+  <div class="page-header">
+    <div>
+      <h1>{{ platform.name }}</h1>
+      <p class="subtitle">Client : {{ platform.client_name }}</p>
+      {% if platform.description %}<p class="small">{{ platform.description }}</p>{% endif %}
+    </div>
+    <div class="actions">
+      <a class="btn" href="{{ url_for('main.platform_edit', platform_id=platform.id) }}">Modifier</a>
+      <form class="inline-form" method="post" action="{{ url_for('main.platform_delete', platform_id=platform.id) }}"
+            onsubmit="return confirm('Supprimer définitivement cette plateforme, ses environnements et son journal ?');">
+        <button type="submit" class="btn btn-danger">Supprimer</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <h2>Environnements</h2>
+      <a class="btn btn-primary btn-sm" href="{{ url_for('main.environment_new', platform_id=platform.id) }}">+ Ajouter un environnement</a>
+    </div>
+
+    {% if platform.environments %}
+      {% for env in platform.environments %}
+        {% set sizing = env.sizing_summary %}
+        <div class="env-block">
+          <div class="env-block-head">
+            <div class="tag-row">
+              <span class="badge badge-{{ env.env_type }}">{{ EnvType.LABELS[env.env_type] }}</span>
+              <span class="badge badge-{{ env.infra_kind }}">{{ InfraKind.LABELS[env.infra_kind] }}</span>
+            </div>
+            <div class="actions">
+              <a class="btn btn-sm" href="{{ url_for('main.environment_edit', environment_id=env.id) }}">Gérer le sizing</a>
+              <form class="inline-form" method="post" action="{{ url_for('main.environment_delete', environment_id=env.id) }}"
+                    onsubmit="return confirm('Supprimer cet environnement ?');">
+                <button type="submit" class="btn btn-danger btn-sm">Supprimer</button>
+              </form>
+            </div>
+          </div>
+
+          {% if sizing %}
+            <div class="sizing-grid">
+              <div class="sizing-metric">
+                <div class="value">{{ sizing.cpu | round(1) }}</div>
+                <div class="label">vCPU</div>
+              </div>
+              <div class="sizing-metric">
+                <div class="value">{{ sizing.ram | round(1) }} Go</div>
+                <div class="label">RAM</div>
+              </div>
+              <div class="sizing-metric">
+                <div class="value">{{ sizing.storage | round(1) }} Go</div>
+                <div class="label">Stockage</div>
+              </div>
+              <div class="sizing-metric">
+                <div class="value">{{ sizing.detail }}</div>
+                <div class="label">{{ "Machines" if env.infra_kind == InfraKind.VM else "Cluster" }}</div>
+              </div>
+            </div>
+          {% elif env.infra_kind == InfraKind.AWS %}
+            <p class="muted small">
+              Environnement AWS —
+              {% if env.aws_sizing and (env.aws_sizing.region or env.aws_sizing.account_id) %}
+                {{ env.aws_sizing.region or "région non renseignée" }}
+                {% if env.aws_sizing.account_id %} · compte {{ env.aws_sizing.account_id }}{% endif %}
+              {% else %}
+                sizing à détailler ultérieurement.
+              {% endif %}
+            </p>
+          {% else %}
+            <p class="muted small">Sizing non renseigné.</p>
+          {% endif %}
+
+          {% if env.notes %}<p class="small muted">{{ env.notes }}</p>{% endif %}
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="card empty-state">
+        <p>Aucun environnement pour cette plateforme.</p>
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <h2>Journal des opérations</h2>
+      <a class="btn btn-primary btn-sm" href="{{ url_for('main.operation_new', platform_id=platform.id) }}">+ Nouvelle opération</a>
+    </div>
+
+    {% if platform.operations %}
+      <div class="card" style="padding:0; overflow-x:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Type</th>
+              <th>Titre</th>
+              <th>Environnement</th>
+              <th>Par</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for op in platform.operations %}
+              <tr>
+                <td>{{ op.performed_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                <td><span class="badge badge-op">{{ OperationType.LABELS[op.operation_type] }}</span></td>
+                <td>
+                  {{ op.title }}
+                  {% if op.description %}<div class="muted small">{{ op.description }}</div>{% endif %}
+                </td>
+                <td>
+                  {% if op.environment %}
+                    <span class="badge badge-{{ op.environment.env_type }}">{{ EnvType.LABELS[op.environment.env_type] }}</span>
+                  {% else %}
+                    <span class="muted small">Plateforme entière</span>
+                  {% endif %}
+                </td>
+                <td>{{ op.performed_by or "—" }}</td>
+                <td>
+                  <form class="inline-form" method="post" action="{{ url_for('main.operation_delete', operation_id=op.id) }}"
+                        onsubmit="return confirm('Supprimer cette entrée du journal ?');">
+                    <button type="submit" class="btn btn-danger btn-sm">Suppr.</button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="card empty-state">
+        <p>Aucune opération tracée pour cette plateforme.</p>
+      </div>
+    {% endif %}
+  </div>
+{% endblock %}
