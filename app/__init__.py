@@ -1,8 +1,24 @@
 import os
 
 from flask import Flask
+from sqlalchemy import text
 
 from .models import EnvType, InfraKind, OperationType, db
+
+
+def _upgrade_schema(engine):
+    """Ajoute les colonnes manquantes sur une base SQLite existante (pas de framework de migration)."""
+    additions = {
+        "file_path": "VARCHAR(500)",
+        "sizing_before": "TEXT",
+        "sizing_after": "TEXT",
+    }
+    with engine.connect() as conn:
+        existing = {row[1] for row in conn.execute(text("PRAGMA table_info(operations)"))}
+        for column, coltype in additions.items():
+            if column not in existing:
+                conn.execute(text(f"ALTER TABLE operations ADD COLUMN {column} {coltype}"))
+        conn.commit()
 
 
 def create_app():
@@ -25,6 +41,7 @@ def create_app():
 
     with app.app_context():
         db.create_all()
+        _upgrade_schema(db.engine)
 
     @app.context_processor
     def inject_reference_data():

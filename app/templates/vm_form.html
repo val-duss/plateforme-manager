@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Modifier {{ vm.name }} — {{ platform.name }}{% endblock %}
+{% block content %}
+  <div class="breadcrumb"><a href="{{ url_for('main.environment_edit', environment_id=environment.id) }}">← Environnement {{ EnvType.LABELS[environment.env_type] }}</a></div>
+
+  <h1>Modifier la machine virtuelle</h1>
+
+  <form class="card" method="post">
+    <div class="form-grid">
+      <div class="form-row">
+        <div class="field">
+          <label for="name">Nom *</label>
+          <input type="text" id="name" name="name" required value="{{ vm.name }}">
+        </div>
+        <div class="field">
+          <label for="role">Rôle</label>
+          <input type="text" id="role" name="role" value="{{ vm.role or '' }}">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="field">
+          <label for="cpu_cores">vCPU *</label>
+          <input type="number" id="cpu_cores" name="cpu_cores" min="0" step="1" required value="{{ vm.cpu_cores }}">
+        </div>
+        <div class="field">
+          <label for="ram_gb">RAM (Go) *</label>
+          <input type="number" id="ram_gb" name="ram_gb" min="0" step="0.5" required value="{{ vm.ram_gb }}">
+        </div>
+        <div class="field">
+          <label for="storage_gb">Stockage (Go) *</label>
+          <input type="number" id="storage_gb" name="storage_gb" min="0" step="1" required value="{{ vm.storage_gb }}">
+        </div>
+      </div>
+      <div class="field">
+        <label for="performed_by">Réalisé par</label>
+        <input type="text" id="performed_by" name="performed_by" placeholder="Nom de la personne">
+        <p class="hint">Toute modification de valeur sera tracée comme une opération « Changement de sizing » dans le journal.</p>
+      </div>
+      <div class="actions">
+        <button class="btn btn-primary" type="submit">Enregistrer</button>
+        <a class="btn" href="{{ url_for('main.environment_edit', environment_id=environment.id) }}">Annuler</a>
+      </div>
+    </div>
+  </form>
+{% endblock %}

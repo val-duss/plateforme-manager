@@ -28,8 +28,9 @@
               <td><a href="{{ url_for('main.platform_detail', platform_id=op.platform_id) }}">{{ op.platform.name }}</a></td>
               <td><span class="badge badge-op">{{ operation_types.LABELS[op.operation_type] }}</span></td>
               <td>
-                {{ op.title }}
+                <a href="{{ url_for('main.operation_edit', operation_id=op.id) }}">{{ op.title }}</a>
                 {% if op.description %}<div class="muted small">{{ op.description }}</div>{% endif %}
+                {% if op.file_path %}<div class="muted small">Fichier : <a href="{{ op.file_link_url }}">{{ op.file_path }}</a></div>{% endif %}
               </td>
               <td>
                 {% if op.environment %}

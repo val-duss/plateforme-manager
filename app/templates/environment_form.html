@@ -61,10 +61,13 @@
                   <td>{{ vm.ram_gb }}</td>
                   <td>{{ vm.storage_gb }}</td>
                   <td>
-                    <form class="inline-form" method="post" action="{{ url_for('main.vm_delete', vm_id=vm.id) }}"
-                          onsubmit="return confirm('Supprimer cette VM ?');">
-                      <button type="submit" class="btn btn-danger btn-sm">Suppr.</button>
-                    </form>
+                    <div class="actions">
+                      <a class="btn btn-sm" href="{{ url_for('main.vm_edit', vm_id=vm.id) }}">Modifier</a>
+                      <form class="inline-form" method="post" action="{{ url_for('main.vm_delete', vm_id=vm.id) }}"
+                            onsubmit="return confirm('Supprimer cette VM ?');">
+                        <button type="submit" class="btn btn-danger btn-sm">Suppr.</button>
+                      </form>
+                    </div>
                   </td>
                 </tr>
               {% else %}
@@ -98,6 +101,10 @@
               <input type="number" id="vm_storage" name="storage_gb" min="0" step="1" required>
             </div>
           </div>
+          <div class="field">
+            <label for="vm_performed_by">Réalisé par</label>
+            <input type="text" id="vm_performed_by" name="performed_by" placeholder="Nom de la personne">
+          </div>
           <div class="actions">
             <button class="btn btn-primary" type="submit">Ajouter la VM</button>
           </div>
@@ -124,6 +131,10 @@
               <input type="number" id="storage_total_gb" name="storage_total_gb" min="0" step="1" required value="{{ k.storage_total_gb if k else 0 }}">
             </div>
           </div>
+          <div class="field">
+            <label for="k8s_performed_by">Réalisé par</label>
+            <input type="text" id="k8s_performed_by" name="performed_by" placeholder="Nom de la personne">
+          </div>
           <div class="actions">
             <button class="btn btn-primary" type="submit">Enregistrer le sizing</button>
           </div>
@@ -147,10 +158,51 @@
             <label for="aws_notes">Notes de sizing</label>
             <textarea id="aws_notes" name="notes">{{ a.notes if a else '' }}</textarea>
           </div>
+          <div class="field">
+            <label for="aws_performed_by">Réalisé par</label>
+            <input type="text" id="aws_performed_by" name="performed_by" placeholder="Nom de la personne">
+          </div>
           <div class="actions">
             <button class="btn btn-primary" type="submit">Enregistrer</button>
           </div>
         </form>
+      {% endif %}
+    </div>
+
+    <div class="section">
+      <h2>Historique des changements de sizing</h2>
+      {% set resizing_ops = environment.operations | selectattr("operation_type", "equalto", OperationType.RESIZING) | list %}
+      {% if resizing_ops %}
+        {% for op in resizing_ops %}
+          <div class="env-block">
+            <div class="env-block-head">
+              <div>
+                <strong>{{ op.performed_at.strftime('%d/%m/%Y %H:%M') }}</strong>
+                {% if op.performed_by %}<span class="muted"> · {{ op.performed_by }}</span>{% endif %}
+              </div>
+              <a class="btn btn-sm" href="{{ url_for('main.operation_edit', operation_id=op.id) }}">Détail</a>
+            </div>
+            <table>
+              <thead><tr><th>Élément</th><th>Avant</th><th>Après</th></tr></thead>
+              <tbody>
+                {% for change in op.sizing_diff %}
+                  <tr>
+                    <td>{{ change.label }}</td>
+                    <td>{{ change.before }}</td>
+                    <td>{{ change.after }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+            {% if op.file_path %}
+              <p class="small muted">Fichier : <a href="{{ op.file_link_url }}">{{ op.file_path }}</a></p>
+            {% endif %}
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="card empty-state">
+          <p>Aucun changement de sizing enregistré pour cet environnement.</p>
+        </div>
       {% endif %}
     </div>
   {% endif %}

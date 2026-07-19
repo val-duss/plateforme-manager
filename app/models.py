@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 
 from flask_sqlalchemy import SQLAlchemy
@@ -97,24 +98,18 @@ class Environment(db.Model):
     @property
     def sizing_summary(self):
         """Retourne un résumé CPU/RAM/stockage selon le type d'infrastructure."""
-        if self.infra_kind == InfraKind.VM:
-            return {
-                "cpu": sum(v.cpu_cores for v in self.vm_sizings),
-                "ram": sum(v.ram_gb for v in self.vm_sizings),
-                "storage": sum(v.storage_gb for v in self.vm_sizings),
-                "detail": f"{len(self.vm_sizings)} VM(s)",
-            }
-        if self.infra_kind == InfraKind.K8S and self.k8s_sizing:
-            k = self.k8s_sizing
-            return {
-                "cpu": k.node_count * k.cpu_per_node,
-                "ram": k.node_count * k.ram_per_node_gb,
-                "storage": k.storage_total_gb,
-                "detail": f"{k.node_count} nœud(s)",
-            }
-        if self.infra_kind == InfraKind.AWS:
+        from .sizing import snapshot_environment
+
+        snap = snapshot_environment(self)
+        if snap["infra_kind"] == InfraKind.AWS:
             return None
-        return None
+        if snap["infra_kind"] == InfraKind.VM:
+            detail = f"{len(snap['items'])} VM(s)"
+        elif snap["items"]:
+            detail = f"{snap['items'][0]['node_count']} nœud(s)"
+        else:
+            detail = "0 nœud(s)"
+        return {"cpu": snap["cpu"], "ram": snap["ram"], "storage": snap["storage"], "detail": detail}
 
 
 class VMSizing(db.Model):
@@ -172,3 +167,29 @@ class Operation(db.Model):
     performed_by = db.Column(db.String(200), nullable=True)
     performed_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    # Chemin vers un fichier accessible depuis l'explorateur de fichiers (ex. partage Windows).
+    file_path = db.Column(db.String(500), nullable=True)
+
+    # Snapshots JSON du sizing avant/après, renseignés uniquement pour les opérations
+    # de type RESIZING générées automatiquement lors d'un changement de sizing.
+    sizing_before = db.Column(db.Text, nullable=True)
+    sizing_after = db.Column(db.Text, nullable=True)
+
+    @property
+    def sizing_diff(self):
+        if not self.sizing_before or not self.sizing_after:
+            return []
+        from .sizing import diff_snapshots
+
+        return diff_snapshots(json.loads(self.sizing_before), json.loads(self.sizing_after))
+
+    @property
+    def file_link_url(self):
+        """Convertit le chemin renseigné en URI file:// (best-effort, pour un clic depuis le navigateur)."""
+        if not self.file_path:
+            return None
+        normalized = self.file_path.strip().replace("\\", "/")
+        if normalized.startswith("//"):
+            return "file:" + normalized
+        return "file:///" + normalized.lstrip("/")

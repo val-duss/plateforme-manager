@@ -53,6 +53,13 @@
         </div>
       </div>
 
+      <div class="field">
+        <label for="file_path">Fichier associé (chemin réseau)</label>
+        <input type="text" id="file_path" name="file_path" placeholder="\\serveur\partage\dossier\rapport.pdf"
+               value="{{ form_data.file_path if form_data else '' }}">
+        <p class="hint">Chemin vers un fichier accessible depuis l'explorateur Windows (ex. partage réseau).</p>
+      </div>
+
       <div class="actions">
         <button class="btn btn-primary" type="submit">Enregistrer dans le journal</button>
         <a class="btn" href="{{ url_for('main.platform_detail', platform_id=platform.id) }}">Annuler</a>
