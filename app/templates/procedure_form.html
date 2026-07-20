@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Nouvelle procédure — {{ platform.name }}{% endblock %}
+{% block content %}
+  <div class="breadcrumb"><a href="{{ url_for('main.platform_detail', platform_id=platform.id) }}">← {{ platform.name }}</a></div>
+
+  <h1>Nouvelle procédure</h1>
+  <p class="subtitle">Décrivez la procédure, vous pourrez ensuite y ajouter des étapes et des tests.</p>
+
+  <form class="card" method="post">
+    <div class="form-grid">
+      <div class="field">
+        <label for="title">Titre *</label>
+        <input type="text" id="title" name="title" required placeholder="Ex : Procédure d'installation"
+               value="{{ form_data.title if form_data else '' }}">
+      </div>
+      <div class="field">
+        <label for="description">Description</label>
+        <textarea id="description" name="description">{{ form_data.description if form_data else '' }}</textarea>
+      </div>
+      <div class="actions">
+        <button class="btn btn-primary" type="submit">Créer la procédure</button>
+        <a class="btn" href="{{ url_for('main.platform_detail', platform_id=platform.id) }}">Annuler</a>
+      </div>
+    </div>
+  </form>
+{% endblock %}

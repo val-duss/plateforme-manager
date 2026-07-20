@@ -87,6 +87,29 @@
 
   <div class="section">
     <div class="section-header">
+      <h2>Procédures</h2>
+      <a class="btn btn-primary btn-sm" href="{{ url_for('main.procedure_new', platform_id=platform.id) }}">+ Nouvelle procédure</a>
+    </div>
+
+    {% if platform.procedures %}
+      <div class="card-list">
+        {% for procedure in platform.procedures %}
+          <a class="card platform-card" href="{{ url_for('main.procedure_edit', procedure_id=procedure.id) }}">
+            <h3>{{ procedure.title }}</h3>
+            {% if procedure.description %}<p class="client">{{ procedure.description }}</p>{% endif %}
+            <p class="small muted">{{ procedure.steps | length }} étape(s)</p>
+          </a>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="card empty-state">
+        <p>Aucune procédure documentée pour cette plateforme.</p>
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="section">
+    <div class="section-header">
       <h2>Journal des opérations</h2>
       <a class="btn btn-primary btn-sm" href="{{ url_for('main.operation_new', platform_id=platform.id) }}">+ Nouvelle opération</a>
     </div>

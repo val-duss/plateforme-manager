@@ -12,6 +12,9 @@ from .models import (
     Operation,
     OperationType,
     Platform,
+    Procedure,
+    ProcedureStep,
+    ProcedureStepTest,
     VMSizing,
     db,
 )
@@ -505,3 +508,159 @@ def operation_delete(operation_id):
 def journal():
     operations = Operation.query.order_by(Operation.performed_at.desc()).limit(300).all()
     return render_template("journal.html", operations=operations, operation_types=OperationType)
+
+
+# --- Procédures ---------------------------------------------------------
+
+
+@bp.route("/platforms/<int:platform_id>/procedures/new", methods=["GET", "POST"])
+def procedure_new(platform_id):
+    platform = Platform.query.get_or_404(platform_id)
+
+    if request.method == "POST":
+        title = request.form.get("title", "").strip()
+        description = request.form.get("description", "").strip()
+
+        if not title:
+            flash("Le titre de la procédure est obligatoire.", "error")
+            return render_template(
+                "procedure_form.html", platform=platform, procedure=None, form_data=request.form
+            )
+
+        procedure = Procedure(platform_id=platform.id, title=title, description=description or None)
+        db.session.add(procedure)
+        db.session.commit()
+        flash("Procédure créée. Ajoutez maintenant ses étapes.", "success")
+        return redirect(url_for("main.procedure_edit", procedure_id=procedure.id))
+
+    return render_template("procedure_form.html", platform=platform, procedure=None, form_data={})
+
+
+@bp.route("/procedures/<int:procedure_id>", methods=["GET", "POST"])
+def procedure_edit(procedure_id):
+    procedure = Procedure.query.get_or_404(procedure_id)
+
+    if request.method == "POST":
+        title = request.form.get("title", "").strip()
+        description = request.form.get("description", "").strip()
+
+        if not title:
+            flash("Le titre de la procédure est obligatoire.", "error")
+            return redirect(url_for("main.procedure_edit", procedure_id=procedure.id))
+
+        procedure.title = title
+        procedure.description = description or None
+        db.session.commit()
+        flash("Procédure mise à jour.", "success")
+        return redirect(url_for("main.procedure_edit", procedure_id=procedure.id))
+
+    return render_template("procedure_edit.html", procedure=procedure, platform=procedure.platform)
+
+
+@bp.route("/procedures/<int:procedure_id>/delete", methods=["POST"])
+def procedure_delete(procedure_id):
+    procedure = Procedure.query.get_or_404(procedure_id)
+    platform_id = procedure.platform_id
+    db.session.delete(procedure)
+    db.session.commit()
+    flash("Procédure supprimée.", "success")
+    return redirect(url_for("main.platform_detail", platform_id=platform_id))
+
+
+@bp.route("/procedures/<int:procedure_id>/steps/add", methods=["POST"])
+def step_add(procedure_id):
+    procedure = Procedure.query.get_or_404(procedure_id)
+    title = request.form.get("title", "").strip()
+    instructions = request.form.get("instructions", "").strip()
+
+    if not title:
+        flash("Le titre de l'étape est obligatoire.", "error")
+        return redirect(url_for("main.procedure_edit", procedure_id=procedure.id))
+
+    next_position = max([s.position for s in procedure.steps], default=0) + 1
+    procedure.steps.append(
+        ProcedureStep(title=title, instructions=instructions or None, position=next_position)
+    )
+    db.session.commit()
+    flash("Étape ajoutée.", "success")
+    return redirect(url_for("main.procedure_edit", procedure_id=procedure.id))
+
+
+@bp.route("/steps/<int:step_id>/edit", methods=["GET", "POST"])
+def step_edit(step_id):
+    step = ProcedureStep.query.get_or_404(step_id)
+    procedure = step.procedure
+
+    if request.method == "POST":
+        title = request.form.get("title", "").strip()
+        instructions = request.form.get("instructions", "").strip()
+
+        if not title:
+            flash("Le titre de l'étape est obligatoire.", "error")
+            return redirect(url_for("main.step_edit", step_id=step.id))
+
+        step.title = title
+        step.instructions = instructions or None
+        db.session.commit()
+        flash("Étape mise à jour.", "success")
+        return redirect(url_for("main.procedure_edit", procedure_id=procedure.id))
+
+    return render_template("step_form.html", step=step, procedure=procedure, platform=procedure.platform)
+
+
+@bp.route("/steps/<int:step_id>/delete", methods=["POST"])
+def step_delete(step_id):
+    step = ProcedureStep.query.get_or_404(step_id)
+    procedure_id = step.procedure_id
+    db.session.delete(step)
+    db.session.commit()
+    flash("Étape supprimée.", "success")
+    return redirect(url_for("main.procedure_edit", procedure_id=procedure_id))
+
+
+@bp.route("/steps/<int:step_id>/move", methods=["POST"])
+def step_move(step_id):
+    step = ProcedureStep.query.get_or_404(step_id)
+    procedure = step.procedure
+    direction = request.form.get("direction")
+
+    steps = procedure.steps
+    index = steps.index(step)
+    if direction == "up":
+        swap_index = index - 1
+    elif direction == "down":
+        swap_index = index + 1
+    else:
+        swap_index = None
+
+    if swap_index is not None and 0 <= swap_index < len(steps):
+        other = steps[swap_index]
+        step.position, other.position = other.position, step.position
+        db.session.commit()
+
+    return redirect(url_for("main.procedure_edit", procedure_id=procedure.id))
+
+
+@bp.route("/steps/<int:step_id>/tests/add", methods=["POST"])
+def step_test_add(step_id):
+    step = ProcedureStep.query.get_or_404(step_id)
+    description = request.form.get("description", "").strip()
+
+    if not description:
+        flash("Merci de renseigner une description pour le test.", "error")
+        return redirect(url_for("main.procedure_edit", procedure_id=step.procedure_id))
+
+    step.tests.append(ProcedureStepTest(description=description))
+    db.session.commit()
+    flash("Test ajouté.", "success")
+    return redirect(url_for("main.procedure_edit", procedure_id=step.procedure_id))
+
+
+@bp.route("/tests/<int:test_id>/delete", methods=["POST"])
+def step_test_delete(test_id):
+    test = ProcedureStepTest.query.get_or_404(test_id)
+    procedure_id = test.step.procedure_id
+    db.session.delete(test)
+    db.session.commit()
+    flash("Test supprimé.", "success")
+    return redirect(url_for("main.procedure_edit", procedure_id=procedure_id))

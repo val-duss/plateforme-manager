@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Modifier une étape — {{ procedure.title }}{% endblock %}
+{% block content %}
+  <div class="breadcrumb"><a href="{{ url_for('main.procedure_edit', procedure_id=procedure.id) }}">← {{ procedure.title }}</a></div>
+
+  <h1>Modifier l'étape</h1>
+
+  <form class="card" method="post">
+    <div class="form-grid">
+      <div class="field">
+        <label for="title">Titre *</label>
+        <input type="text" id="title" name="title" required value="{{ step.title }}">
+      </div>
+      <div class="field">
+        <label for="instructions">Instructions</label>
+        <textarea id="instructions" name="instructions">{{ step.instructions or '' }}</textarea>
+      </div>
+      <div class="actions">
+        <button class="btn btn-primary" type="submit">Enregistrer</button>
+        <a class="btn" href="{{ url_for('main.procedure_edit', procedure_id=procedure.id) }}">Annuler</a>
+      </div>
+    </div>
+  </form>
+{% endblock %}

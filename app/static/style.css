@@ -283,6 +283,14 @@ textarea { resize: vertical; min-height: 70px; }
 .infra-panel { display: none; }
 .infra-panel.active { display: block; }
 
+.inline-add-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.inline-add-row input[type=text] { flex: 1; }
+
 fieldset {
   border: 1px solid var(--border);
   border-radius: var(--radius);

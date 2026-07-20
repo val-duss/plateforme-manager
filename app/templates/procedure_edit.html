@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}{{ procedure.title }} — {{ platform.name }}{% endblock %}
+{% block content %}
+  <div class="breadcrumb"><a href="{{ url_for('main.platform_detail', platform_id=platform.id) }}">← {{ platform.name }}</a></div>
+
+  <div class="page-header">
+    <div>
+      <h1>{{ procedure.title }}</h1>
+      {% if procedure.description %}<p class="subtitle">{{ procedure.description }}</p>{% endif %}
+    </div>
+    <form class="inline-form" method="post" action="{{ url_for('main.procedure_delete', procedure_id=procedure.id) }}"
+          onsubmit="return confirm('Supprimer définitivement cette procédure et toutes ses étapes ?');">
+      <button type="submit" class="btn btn-danger">Supprimer la procédure</button>
+    </form>
+  </div>
+
+  <form class="card" method="post">
+    <div class="form-grid">
+      <div class="field">
+        <label for="title">Titre *</label>
+        <input type="text" id="title" name="title" required value="{{ procedure.title }}">
+      </div>
+      <div class="field">
+        <label for="description">Description</label>
+        <textarea id="description" name="description">{{ procedure.description or '' }}</textarea>
+      </div>
+      <div class="actions">
+        <button class="btn btn-primary" type="submit">Enregistrer</button>
+      </div>
+    </div>
+  </form>
+
+  <div class="section">
+    <h2>Étapes</h2>
+
+    {% if procedure.steps %}
+      {% for step in procedure.steps %}
+        <div class="env-block">
+          <div class="env-block-head">
+            <div>
+              <strong>Étape {{ loop.index }} — {{ step.title }}</strong>
+            </div>
+            <div class="actions">
+              <form class="inline-form" method="post" action="{{ url_for('main.step_move', step_id=step.id) }}">
+                <input type="hidden" name="direction" value="up">
+                <button type="submit" class="btn btn-sm" {{ "disabled" if loop.first else "" }}>↑</button>
+              </form>
+              <form class="inline-form" method="post" action="{{ url_for('main.step_move', step_id=step.id) }}">
+                <input type="hidden" name="direction" value="down">
+                <button type="submit" class="btn btn-sm" {{ "disabled" if loop.last else "" }}>↓</button>
+              </form>
+              <a class="btn btn-sm" href="{{ url_for('main.step_edit', step_id=step.id) }}">Modifier</a>
+              <form class="inline-form" method="post" action="{{ url_for('main.step_delete', step_id=step.id) }}"
+                    onsubmit="return confirm('Supprimer cette étape et ses tests ?');">
+                <button type="submit" class="btn btn-danger btn-sm">Supprimer</button>
+              </form>
+            </div>
+          </div>
+
+          {% if step.instructions %}<p class="small">{{ step.instructions }}</p>{% endif %}
+
+          <h3 class="small">Tests optionnels</h3>
+          {% if step.tests %}
+            <table>
+              <tbody>
+                {% for test in step.tests %}
+                  <tr>
+                    <td>{{ test.description }}</td>
+                    <td style="width:1%;">
+                      <form class="inline-form" method="post" action="{{ url_for('main.step_test_delete', test_id=test.id) }}"
+                            onsubmit="return confirm('Supprimer ce test ?');">
+                        <button type="submit" class="btn btn-danger btn-sm">Suppr.</button>
+                      </form>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          {% else %}
+            <p class="muted small">Aucun test renseigné pour cette étape.</p>
+          {% endif %}
+
+          <form method="post" action="{{ url_for('main.step_test_add', step_id=step.id) }}" class="inline-add-row">
+            <input type="text" name="description" placeholder="Ex : vérifier que le service répond sur le port 8080">
+            <button type="submit" class="btn btn-sm">+ Ajouter un test</button>
+          </form>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="card empty-state">
+        <p>Aucune étape pour le moment.</p>
+      </div>
+    {% endif %}
+
+    <form class="card" method="post" action="{{ url_for('main.step_add', procedure_id=procedure.id) }}">
+      <h3>Ajouter une étape</h3>
+      <div class="form-grid">
+        <div class="field">
+          <label for="step_title">Titre *</label>
+          <input type="text" id="step_title" name="title" required placeholder="Ex : Vérifier les prérequis">
+        </div>
+        <div class="field">
+          <label for="step_instructions">Instructions</label>
+          <textarea id="step_instructions" name="instructions"></textarea>
+        </div>
+        <div class="actions">
+          <button class="btn btn-primary" type="submit">Ajouter l'étape</button>
+        </div>
+      </div>
+    </form>
+  </div>
+{% endblock %}

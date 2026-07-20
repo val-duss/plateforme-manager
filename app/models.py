@@ -67,6 +67,12 @@ class Platform(db.Model):
         cascade="all, delete-orphan",
         order_by="Operation.performed_at.desc()",
     )
+    procedures = db.relationship(
+        "Procedure",
+        backref="platform",
+        cascade="all, delete-orphan",
+        order_by="Procedure.title",
+    )
 
 
 class Environment(db.Model):
@@ -193,3 +199,47 @@ class Operation(db.Model):
         if normalized.startswith("//"):
             return "file:" + normalized
         return "file:///" + normalized.lstrip("/")
+
+
+class Procedure(db.Model):
+    __tablename__ = "procedures"
+
+    id = db.Column(db.Integer, primary_key=True)
+    platform_id = db.Column(db.Integer, db.ForeignKey("platforms.id"), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    steps = db.relationship(
+        "ProcedureStep",
+        backref="procedure",
+        cascade="all, delete-orphan",
+        order_by="ProcedureStep.position",
+    )
+
+
+class ProcedureStep(db.Model):
+    __tablename__ = "procedure_steps"
+
+    id = db.Column(db.Integer, primary_key=True)
+    procedure_id = db.Column(db.Integer, db.ForeignKey("procedures.id"), nullable=False)
+    position = db.Column(db.Integer, nullable=False, default=0)
+    title = db.Column(db.String(200), nullable=False)
+    instructions = db.Column(db.Text, nullable=True)
+
+    tests = db.relationship(
+        "ProcedureStepTest",
+        backref="step",
+        cascade="all, delete-orphan",
+        order_by="ProcedureStepTest.id",
+    )
+
+
+class ProcedureStepTest(db.Model):
+    """Test optionnel de validation, rattaché à une étape de procédure."""
+
+    __tablename__ = "procedure_step_tests"
+
+    id = db.Column(db.Integer, primary_key=True)
+    step_id = db.Column(db.Integer, db.ForeignKey("procedure_steps.id"), nullable=False)
+    description = db.Column(db.Text, nullable=False)
