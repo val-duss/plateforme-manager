@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Check journalier — Plateforme Manager{% endblock %}
+{% block content %}
+  <div class="page-header">
+    <div>
+      <h1>Check journalier</h1>
+      <p class="subtitle">Confirmez l'absence d'alerte sur chaque environnement, ou signalez/clôturez une alerte.</p>
+    </div>
+    <div class="tag-row">
+      <a class="btn btn-sm" href="{{ url_for('main.daily_check_week') }}">Vue semaine</a>
+      <a class="btn btn-sm" href="{{ url_for('main.daily_check_month') }}">Vue mois</a>
+    </div>
+  </div>
+
+  <div class="card" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+    <a class="btn btn-sm" href="{{ url_for('main.daily_check', date=prev_date.isoformat()) }}">← Veille</a>
+    <div style="text-align:center;">
+      <strong>{{ check_date.strftime('%d/%m/%Y') }}</strong>
+      {% if check_date == today %}<span class="badge badge-op">Aujourd'hui</span>{% endif %}
+    </div>
+    {% if check_date < today %}
+      <a class="btn btn-sm" href="{{ url_for('main.daily_check', date=next_date.isoformat()) }}">Lendemain →</a>
+    {% else %}
+      <span></span>
+    {% endif %}
+  </div>
+
+  {% if environments %}
+    {% set ns = namespace(current_platform=None) %}
+    {% for env in environments %}
+      {% if env.platform_id != ns.current_platform %}
+        {% set ns.current_platform = env.platform_id %}
+        <h2 class="section-header" style="margin-top:24px;">
+          <a href="{{ url_for('main.platform_detail', platform_id=env.platform_id) }}">{{ env.platform.name }}</a>
+        </h2>
+      {% endif %}
+
+      {% set check = checks_today.get(env.id) %}
+      <div class="env-block">
+        <div class="env-block-head">
+          <div class="tag-row">
+            <span class="badge badge-{{ env.env_type }}">{{ EnvType.LABELS[env.env_type] }}</span>
+            <span class="badge badge-{{ env.infra_kind }}">{{ InfraKind.LABELS[env.infra_kind] }}</span>
+          </div>
+          {% if not env.open_alerts and check %}
+            <span class="badge badge-task-status-TERMINEE">RAS confirmé à {{ check.checked_at.strftime('%H:%M') }}{% if check.checked_by %} par {{ check.checked_by }}{% endif %}</span>
+          {% endif %}
+        </div>
+
+        {% if env.open_alerts %}
+          {% for alert in env.open_alerts %}
+            <div class="card" style="background:var(--badge-prod-bg); border-color:transparent; margin-bottom:10px;">
+              <strong>{{ alert.title }}</strong>
+              <p class="small muted">
+                Ouverte le {{ alert.opened_at.strftime('%d/%m/%Y %H:%M') }}
+                {% if alert.opened_by %} par {{ alert.opened_by }}{% endif %}
+              </p>
+              {% if alert.description %}<p class="small">{{ alert.description }}</p>{% endif %}
+              <form method="post" action="{{ url_for('main.alert_close', alert_id=alert.id) }}">
+                <input type="hidden" name="next" value="{{ url_for('main.daily_check', date=check_date.isoformat()) }}">
+                <div class="form-row">
+                  <div class="field">
+                    <label>Clôturé par</label>
+                    <input type="text" name="closed_by">
+                  </div>
+                  <div class="field">
+                    <label>Résolution</label>
+                    <input type="text" name="resolution_notes" placeholder="Cause / correctif appliqué">
+                  </div>
+                </div>
+                <div class="actions">
+                  <button type="submit" class="btn btn-primary btn-sm">Clôturer l'alerte</button>
+                </div>
+              </form>
+            </div>
+          {% endfor %}
+        {% elif check_date <= today %}
+          <div class="actions">
+            <form method="post" action="{{ url_for('main.daily_check_ok', environment_id=env.id) }}" class="inline-add-row">
+              <input type="hidden" name="date" value="{{ check_date.isoformat() }}">
+              <input type="text" name="checked_by" placeholder="Réalisé par (optionnel)">
+              <button type="submit" class="btn btn-primary btn-sm">RAS</button>
+            </form>
+          </div>
+        {% endif %}
+
+        {% if check_date <= today %}
+          <form method="post" action="{{ url_for('main.daily_check_alert', environment_id=env.id) }}" style="margin-top:10px;">
+            <input type="hidden" name="date" value="{{ check_date.isoformat() }}">
+            <div class="form-row">
+              <div class="field">
+                <input type="text" name="title" placeholder="Titre de l'alerte">
+              </div>
+              <div class="field">
+                <input type="text" name="description" placeholder="Description (optionnel)">
+              </div>
+              <div class="field">
+                <input type="text" name="opened_by" placeholder="Signalé par (optionnel)">
+              </div>
+            </div>
+            <div class="actions">
+              <button type="submit" class="btn btn-danger btn-sm">Signaler une alerte</button>
+            </div>
+          </form>
+        {% endif %}
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="card empty-state">
+      <p>Aucun environnement enregistré pour le moment.</p>
+    </div>
+  {% endif %}
+{% endblock %}

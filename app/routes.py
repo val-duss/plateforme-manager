@@ -1,16 +1,21 @@
+import calendar
 import json
 import os
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 from flask import Blueprint, abort, flash, redirect, render_template, request, send_from_directory, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 
+from .checks import MONTH_NAMES_FR, WEEKDAY_NAMES_FR, WEEKDAY_NAMES_FR_LONG, compute_environment_statuses
 from .models import (
     AppSettings,
     AwsSizing,
     BillingEntry,
     BillingPeriodicity,
+    CheckStatus,
+    DailyCheck,
     Environment,
+    EnvironmentAlert,
     EnvType,
     InfraKind,
     K8sSizing,
@@ -1029,4 +1034,185 @@ def task_delete(task_id):
         url_for("main.platform_detail", platform_id=redirect_platform_id)
         if redirect_platform_id
         else url_for("main.tasks_list")
+    )
+
+
+# --- Check journalier ----------------------------------------------------
+
+
+def _all_environments():
+    return Environment.query.join(Platform).order_by(Platform.name, Environment.env_type).all()
+
+
+@bp.route("/check-journalier")
+def daily_check():
+    check_date = parse_date(request.args.get("date")) or date.today()
+    environments = _all_environments()
+    env_ids = [e.id for e in environments]
+
+    checks_today = {
+        c.environment_id: c
+        for c in DailyCheck.query.filter(
+            DailyCheck.environment_id.in_(env_ids), DailyCheck.check_date == check_date
+        ).all()
+    }
+
+    return render_template(
+        "daily_check.html",
+        environments=environments,
+        check_date=check_date,
+        today=date.today(),
+        prev_date=check_date - timedelta(days=1),
+        next_date=check_date + timedelta(days=1),
+        checks_today=checks_today,
+        CheckStatus=CheckStatus,
+    )
+
+
+@bp.route("/check-journalier/<int:environment_id>/ok", methods=["POST"])
+def daily_check_ok(environment_id):
+    environment = Environment.query.get_or_404(environment_id)
+    check_date = parse_date(request.form.get("date")) or date.today()
+    checked_by = request.form.get("checked_by", "").strip()
+
+    if environment.open_alerts:
+        flash("Impossible de confirmer RAS : une alerte est encore ouverte sur cet environnement.", "error")
+        return redirect(url_for("main.daily_check", date=check_date.isoformat()))
+
+    existing = DailyCheck.query.filter_by(environment_id=environment.id, check_date=check_date).first()
+    if existing:
+        existing.status = CheckStatus.OK
+        existing.checked_by = checked_by or None
+        existing.checked_at = datetime.utcnow()
+    else:
+        db.session.add(
+            DailyCheck(
+                environment_id=environment.id,
+                check_date=check_date,
+                status=CheckStatus.OK,
+                checked_by=checked_by or None,
+            )
+        )
+    db.session.commit()
+    flash("Vérification enregistrée : RAS.", "success")
+    return redirect(url_for("main.daily_check", date=check_date.isoformat()))
+
+
+@bp.route("/check-journalier/<int:environment_id>/alerte", methods=["POST"])
+def daily_check_alert(environment_id):
+    environment = Environment.query.get_or_404(environment_id)
+    title = request.form.get("title", "").strip()
+    description = request.form.get("description", "").strip()
+    opened_by = request.form.get("opened_by", "").strip()
+    check_date = parse_date(request.form.get("date")) or date.today()
+
+    if not title:
+        flash("Merci de renseigner un titre pour l'alerte.", "error")
+        return redirect(url_for("main.daily_check", date=check_date.isoformat()))
+
+    db.session.add(
+        EnvironmentAlert(
+            environment_id=environment.id,
+            title=title,
+            description=description or None,
+            opened_by=opened_by or None,
+        )
+    )
+    db.session.add(
+        Operation(
+            platform_id=environment.platform_id,
+            environment_id=environment.id,
+            operation_type=OperationType.INCIDENT,
+            title=f"Alerte : {title}",
+            description=description or None,
+            performed_by=opened_by or None,
+        )
+    )
+    db.session.commit()
+    flash("Alerte enregistrée.", "success")
+    return redirect(url_for("main.daily_check", date=check_date.isoformat()))
+
+
+@bp.route("/alertes/<int:alert_id>/clore", methods=["POST"])
+def alert_close(alert_id):
+    alert = EnvironmentAlert.query.get_or_404(alert_id)
+    closed_by = request.form.get("closed_by", "").strip()
+    resolution_notes = request.form.get("resolution_notes", "").strip()
+    next_path = request.form.get("next") or url_for("main.daily_check")
+
+    alert.closed_at = datetime.utcnow()
+    alert.closed_by = closed_by or None
+    alert.resolution_notes = resolution_notes or None
+
+    db.session.add(
+        Operation(
+            platform_id=alert.environment.platform_id,
+            environment_id=alert.environment_id,
+            operation_type=OperationType.INCIDENT,
+            title=f"Clôture d'alerte : {alert.title}",
+            description=resolution_notes or None,
+            performed_by=closed_by or None,
+        )
+    )
+    db.session.commit()
+    flash("Alerte clôturée.", "success")
+    return redirect(next_path)
+
+
+@bp.route("/check-journalier/semaine")
+def daily_check_week():
+    start = parse_date(request.args.get("start"))
+    if not start:
+        today = date.today()
+        start = today - timedelta(days=today.weekday())
+    end = start + timedelta(days=6)
+
+    environments = _all_environments()
+    days, status_by_env = compute_environment_statuses(environments, start, end)
+
+    return render_template(
+        "daily_check_overview.html",
+        environments=environments,
+        days=days,
+        status_by_env=status_by_env,
+        period_label=f"Semaine du {start.strftime('%d/%m')} au {end.strftime('%d/%m/%Y')}",
+        prev_url=url_for("main.daily_check_week", start=(start - timedelta(days=7)).isoformat()),
+        next_url=url_for("main.daily_check_week", start=(start + timedelta(days=7)).isoformat()),
+        day_labels=WEEKDAY_NAMES_FR,
+        today=date.today(),
+        CheckStatus=CheckStatus,
+    )
+
+
+@bp.route("/check-journalier/mois")
+def daily_check_month():
+    month_param = request.args.get("month")
+    if month_param:
+        try:
+            year, month = (int(part) for part in month_param.split("-", 1))
+        except ValueError:
+            year, month = date.today().year, date.today().month
+    else:
+        today = date.today()
+        year, month = today.year, today.month
+
+    start = date(year, month, 1)
+    end = date(year, month, calendar.monthrange(year, month)[1])
+    prev_month_end = start - timedelta(days=1)
+    next_month_start = end + timedelta(days=1)
+
+    environments = _all_environments()
+    days, status_by_env = compute_environment_statuses(environments, start, end)
+
+    return render_template(
+        "daily_check_overview.html",
+        environments=environments,
+        days=days,
+        status_by_env=status_by_env,
+        period_label=f"{MONTH_NAMES_FR[month - 1]} {year}",
+        prev_url=url_for("main.daily_check_month", month=f"{prev_month_end.year:04d}-{prev_month_end.month:02d}"),
+        next_url=url_for("main.daily_check_month", month=f"{next_month_start.year:04d}-{next_month_start.month:02d}"),
+        day_labels=None,
+        today=date.today(),
+        CheckStatus=CheckStatus,
     )

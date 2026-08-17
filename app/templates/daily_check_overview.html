@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Check journalier — {{ period_label }}{% endblock %}
+{% block content %}
+  <div class="page-header">
+    <div>
+      <h1>Check journalier</h1>
+      <p class="subtitle">Vue d'ensemble — {{ period_label }}</p>
+    </div>
+    <div class="tag-row">
+      <a class="btn btn-sm" href="{{ url_for('main.daily_check') }}">Vue du jour</a>
+      <a class="btn btn-sm" href="{{ url_for('main.daily_check_week') }}">Semaine</a>
+      <a class="btn btn-sm" href="{{ url_for('main.daily_check_month') }}">Mois</a>
+    </div>
+  </div>
+
+  <div class="card" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+    <a class="btn btn-sm" href="{{ prev_url }}">← Précédent</a>
+    <strong>{{ period_label }}</strong>
+    <a class="btn btn-sm" href="{{ next_url }}">Suivant →</a>
+  </div>
+
+  <div class="tag-row small muted" style="margin: 10px 0 16px;">
+    <span><span class="check-dot check-dot-OK"></span> RAS</span>
+    <span><span class="check-dot check-dot-ALERT"></span> Alerte</span>
+    <span><span class="check-dot check-dot-none"></span> Non vérifié</span>
+  </div>
+
+  {% if environments %}
+    <div class="card check-grid" style="padding:0; overflow-x:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>Environnement</th>
+            {% for day in days %}
+              <th class="check-cell {{ 'check-cell-today' if day == today else '' }}">
+                {% if day_labels %}{{ day_labels[loop.index0] }}<br>{% endif %}{{ day.strftime('%d/%m') }}
+              </th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for env in environments %}
+            <tr>
+              <td>
+                <a href="{{ url_for('main.platform_detail', platform_id=env.platform_id) }}">{{ env.platform.name }}</a>
+                <div class="tag-row">
+                  <span class="badge badge-{{ env.env_type }}">{{ EnvType.LABELS[env.env_type] }}</span>
+                </div>
+              </td>
+              {% for day in days %}
+                {% set status = status_by_env.get(env.id, {}).get(day) %}
+                <td class="check-cell {{ 'check-cell-today' if day == today else '' }}"
+                    title="{{ day.strftime('%d/%m/%Y') }} — {{ CheckStatus.LABELS.get(status, 'Non vérifié') }}">
+                  <span class="check-dot check-dot-{{ status or 'none' }}"></span>
+                </td>
+              {% endfor %}
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="card empty-state">
+      <p>Aucun environnement enregistré pour le moment.</p>
+    </div>
+  {% endif %}
+{% endblock %}

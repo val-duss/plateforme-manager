@@ -112,6 +112,26 @@ class Environment(db.Model):
         cascade="all, delete-orphan",
         order_by="Operation.performed_at.desc()",
     )
+    daily_checks = db.relationship(
+        "DailyCheck",
+        backref="environment",
+        cascade="all, delete-orphan",
+        order_by="DailyCheck.check_date.desc()",
+    )
+    alerts = db.relationship(
+        "EnvironmentAlert",
+        backref="environment",
+        cascade="all, delete-orphan",
+        order_by="EnvironmentAlert.opened_at.desc()",
+    )
+
+    @property
+    def open_alerts(self):
+        return [a for a in self.alerts if a.is_open]
+
+    @property
+    def open_alert_count(self):
+        return len(self.open_alerts)
 
     @property
     def sizing_summary(self):
@@ -362,3 +382,52 @@ class Task(db.Model):
     assigned_to = db.Column(db.String(200), nullable=True)
     due_date = db.Column(db.Date, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+
+class CheckStatus:
+    OK = "OK"
+    ALERT = "ALERT"
+    ALL = [OK, ALERT]
+    LABELS = {
+        OK: "RAS",
+        ALERT: "Alerte",
+    }
+
+
+class DailyCheck(db.Model):
+    """Confirmation quotidienne « RAS » pour un environnement donné.
+
+    Une alerte ouverte sur l'environnement prévaut toujours sur cette
+    confirmation pour l'affichage du statut du jour (voir app/checks.py).
+    """
+
+    __tablename__ = "daily_checks"
+    __table_args__ = (db.UniqueConstraint("environment_id", "check_date", name="uq_daily_check_env_date"),)
+
+    id = db.Column(db.Integer, primary_key=True)
+    environment_id = db.Column(db.Integer, db.ForeignKey("environments.id"), nullable=False)
+    check_date = db.Column(db.Date, nullable=False)
+    status = db.Column(db.String(20), nullable=False, default=CheckStatus.OK)
+    checked_by = db.Column(db.String(200), nullable=True)
+    checked_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    notes = db.Column(db.Text, nullable=True)
+
+
+class EnvironmentAlert(db.Model):
+    """Alerte remontée sur un environnement, ouverte jusqu'à sa clôture."""
+
+    __tablename__ = "environment_alerts"
+
+    id = db.Column(db.Integer, primary_key=True)
+    environment_id = db.Column(db.Integer, db.ForeignKey("environments.id"), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    opened_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    opened_by = db.Column(db.String(200), nullable=True)
+    closed_at = db.Column(db.DateTime, nullable=True)
+    closed_by = db.Column(db.String(200), nullable=True)
+    resolution_notes = db.Column(db.Text, nullable=True)
+
+    @property
+    def is_open(self):
+        return self.closed_at is None

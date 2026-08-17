@@ -9,6 +9,7 @@ from werkzeug.security import generate_password_hash
 from .models import (
     AppSettings,
     BillingPeriodicity,
+    CheckStatus,
     EnvType,
     InfraKind,
     OperationType,
@@ -103,6 +104,7 @@ def create_app():
             "TaskType": TaskType,
             "TaskStatus": TaskStatus,
             "BillingPeriodicity": BillingPeriodicity,
+            "CheckStatus": CheckStatus,
         }
 
     return app

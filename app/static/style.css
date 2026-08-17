@@ -97,17 +97,33 @@ h3 { font-size: 1.05rem; margin: 0 0 8px; }
 
 .card-list { display: grid; gap: 14px; }
 
-.platform-card {
-  display: block;
-  text-decoration: none;
-  color: inherit;
-  transition: border-color .15s ease;
+.platform-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
 }
 
-.platform-card:hover { border-color: var(--primary); }
+.platform-card {
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color .15s ease, transform .15s ease;
+}
+
+.platform-card:hover { border-color: var(--primary); transform: translateY(-2px); }
 
 .platform-card h3 { margin-bottom: 2px; }
 .platform-card .client { color: var(--text-muted); font-size: 0.9rem; margin: 0 0 10px; }
+
+.platform-card-footer {
+  margin-top: auto;
+  padding-top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
 
 .empty-state {
   text-align: center;
@@ -385,3 +401,26 @@ legend { font-weight: 600; font-size: 0.9rem; padding: 0 6px; }
 
 .home-tile h3 { margin: 0; font-size: 1.05rem; }
 .home-tile p { margin: 0; color: var(--text-muted); font-size: 0.85rem; }
+
+.check-grid th, .check-grid td { white-space: nowrap; }
+
+.check-cell {
+  text-align: center;
+  padding: 6px 8px !important;
+}
+
+.check-cell-today {
+  background: var(--bg);
+}
+
+.check-dot {
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--border);
+}
+
+.check-dot-OK { background: var(--success); }
+.check-dot-ALERT { background: var(--danger); }
+.check-dot-none { background: var(--border); }

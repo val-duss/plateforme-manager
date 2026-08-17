@@ -10,7 +10,7 @@
   </div>
 
   {% if platforms %}
-    <div class="card-list">
+    <div class="platform-grid">
       {% for platform in platforms %}
         <a class="card platform-card" href="{{ url_for('main.platform_detail', platform_id=platform.id) }}">
           <h3>{{ platform.name }}</h3>
@@ -22,6 +22,13 @@
               {% endfor %}
             {% else %}
               <span class="muted small">Aucun environnement</span>
+            {% endif %}
+          </div>
+          <div class="platform-card-footer">
+            <span class="muted small">{{ platform.environments | length }} environnement(s)</span>
+            {% set open_alert_count = platform.environments | sum(attribute="open_alert_count") %}
+            {% if open_alert_count %}
+              <span class="badge badge-presale-PERDU">{{ open_alert_count }} alerte(s)</span>
             {% endif %}
           </div>
         </a>
