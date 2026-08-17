@@ -17,8 +17,11 @@ if errorlevel 1 (
     exit /b 1
 )
 
+set "SCRIPT_DIR=%~dp0"
+if "%SCRIPT_DIR:~-1%"=="\" set "SCRIPT_DIR=%SCRIPT_DIR:~0,-1%"
+
 set "WSL_PATH="
-for /f "usebackq delims=" %%p in (`wsl wslpath -a "%~dp0"`) do set "WSL_PATH=%%p"
+for /f "usebackq delims=" %%p in (`wsl wslpath -a "%SCRIPT_DIR%"`) do set "WSL_PATH=%%p"
 
 if "%WSL_PATH%"=="" (
     echo [ERREUR] Impossible de determiner le chemin WSL de ce dossier.
