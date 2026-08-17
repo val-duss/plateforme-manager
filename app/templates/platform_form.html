@@ -4,7 +4,7 @@
   {% if platform %}
     <div class="breadcrumb"><a href="{{ url_for('main.platform_detail', platform_id=platform.id) }}">← {{ platform.name }}</a></div>
   {% else %}
-    <div class="breadcrumb"><a href="{{ url_for('main.index') }}">← Plateformes</a></div>
+    <div class="breadcrumb"><a href="{{ url_for('main.platforms_list') }}">← Plateformes</a></div>
   {% endif %}
 
   <h1>{{ "Modifier la plateforme" if platform else "Nouvelle plateforme" }}</h1>
@@ -26,7 +26,7 @@
       </div>
       <div class="actions">
         <button class="btn btn-primary" type="submit">Enregistrer</button>
-        <a class="btn" href="{{ url_for('main.platform_detail', platform_id=platform.id) if platform else url_for('main.index') }}">Annuler</a>
+        <a class="btn" href="{{ url_for('main.platform_detail', platform_id=platform.id) if platform else url_for('main.platforms_list') }}">Annuler</a>
       </div>
     </div>
   </form>

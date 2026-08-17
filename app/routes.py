@@ -147,6 +147,11 @@ def record_sizing_operation(environment, before, after, performed_by=None, file_
 
 @bp.route("/")
 def index():
+    return render_template("home.html")
+
+
+@bp.route("/plateformes")
+def platforms_list():
     platforms = Platform.query.order_by(Platform.name).all()
     return render_template("index.html", platforms=platforms)
 
@@ -216,7 +221,7 @@ def platform_delete(platform_id):
     db.session.delete(platform)
     db.session.commit()
     flash("Plateforme supprimée.", "success")
-    return redirect(url_for("main.index"))
+    return redirect(url_for("main.platforms_list"))
 
 
 # --- Environnements -------------------------------------------------------

@@ -331,3 +331,57 @@ fieldset {
 }
 
 legend { font-weight: 600; font-size: 0.9rem; padding: 0 6px; }
+
+.home-hero {
+  text-align: center;
+  padding: 12px 0 4px;
+}
+
+.home-hero .subtitle {
+  max-width: 520px;
+  margin: 8px auto 0;
+}
+
+.home-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 16px;
+  margin-top: 28px;
+}
+
+.home-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+  padding: 30px 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color .15s ease, transform .15s ease;
+}
+
+.home-tile:hover {
+  border-color: var(--primary);
+  transform: translateY(-2px);
+}
+
+.home-tile .icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.home-tile .icon svg { width: 26px; height: 26px; }
+
+.home-tile h3 { margin: 0; font-size: 1.05rem; }
+.home-tile p { margin: 0; color: var(--text-muted); font-size: 0.85rem; }
