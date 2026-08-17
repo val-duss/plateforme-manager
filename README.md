@@ -2,10 +2,13 @@
 
 Application simple (Python/Flask) pour documenter des plateformes informatiques :
 plateformes clients, environnements (INT/UAT/Production), sizing par environnement
-(VM, Kubernetes ou AWS), et journal des opérations (installation, maintenance,
-changement de sizing, récupération de logs, incident).
+(VM, Kubernetes ou AWS), journal des opérations (installation, maintenance,
+changement de sizing, récupération de logs, incident), facturation par plateforme,
+avant-ventes et tâches (installation, maintenance, build, atelier technique).
 
 Les données sont stockées dans une base SQLite persistée sur un volume Docker.
+L'accès est protégé par un code PIN à 4 chiffres (par défaut `0000`, modifiable
+depuis la page **Paramètres** une fois connecté).
 
 ## Lancer avec Docker Compose
 
@@ -25,9 +28,14 @@ Depuis un terminal WSL, à la racine du dépôt :
 
 ```bash
 chmod +x *.sh
-./demarrer-application.sh          # démarre (et construit si besoin), puis ouvre le navigateur
+./demarrer-application.sh          # démarre (et construit si besoin), puis ouvre l'application dans sa propre fenêtre
 ./mettre-a-jour-et-rebuild.sh      # git pull puis reconstruction/redémarrage
 ```
+
+`demarrer-application.sh` ouvre l'application dans une fenêtre dédiée (mode
+« application » d'Edge ou Chrome : sans barre d'adresse ni onglets) plutôt
+que dans un onglet de navigateur classique, avec repli automatique sur le
+navigateur par défaut si aucun des deux n'est disponible.
 
 Pour un lancement en double-clic depuis l'explorateur Windows sans ouvrir de
 terminal, `demarrer-application.bat` et `mettre-a-jour-et-rebuild.bat` font la
@@ -59,3 +67,11 @@ python wsgi.py
 - **Opération** : rattachée à une plateforme (et optionnellement à un
   environnement précis) — installation, maintenance, changement de sizing,
   récupération de logs, incident
+- **Procédure** : rattachée à une plateforme, liste d'étapes ordonnées avec
+  tests optionnels
+- **Facturation** : lignes de facturation rattachées à une plateforme
+  (libellé, montant, périodicité, dates)
+- **Avant-vente** : opportunité commerciale indépendante d'une plateforme
+  (client, projet, statut, montant estimé)
+- **Tâche** : installation, maintenance, build ou atelier technique, avec
+  statut (à faire/en cours/terminée) et plateforme optionnelle

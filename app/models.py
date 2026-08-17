@@ -73,6 +73,18 @@ class Platform(db.Model):
         cascade="all, delete-orphan",
         order_by="Procedure.title",
     )
+    billing_entries = db.relationship(
+        "BillingEntry",
+        backref="platform",
+        cascade="all, delete-orphan",
+        order_by="BillingEntry.created_at.desc()",
+    )
+    tasks = db.relationship(
+        "Task",
+        backref="platform",
+        cascade="all, delete-orphan",
+        order_by="Task.created_at.desc()",
+    )
 
 
 class Environment(db.Model):
@@ -243,3 +255,110 @@ class ProcedureStepTest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     step_id = db.Column(db.Integer, db.ForeignKey("procedure_steps.id"), nullable=False)
     description = db.Column(db.Text, nullable=False)
+
+
+class AppSettings(db.Model):
+    """Réglages applicatifs, ligne unique (id=1) — contient notamment le PIN d'accès."""
+
+    __tablename__ = "app_settings"
+
+    id = db.Column(db.Integer, primary_key=True)
+    pin_hash = db.Column(db.String(255), nullable=False)
+
+
+class BillingPeriodicity:
+    UNIQUE = "UNIQUE"
+    MENSUELLE = "MENSUELLE"
+    TRIMESTRIELLE = "TRIMESTRIELLE"
+    ANNUELLE = "ANNUELLE"
+    ALL = [UNIQUE, MENSUELLE, TRIMESTRIELLE, ANNUELLE]
+    LABELS = {
+        UNIQUE: "Unique",
+        MENSUELLE: "Mensuelle",
+        TRIMESTRIELLE: "Trimestrielle",
+        ANNUELLE: "Annuelle",
+    }
+
+
+class BillingEntry(db.Model):
+    __tablename__ = "billing_entries"
+
+    id = db.Column(db.Integer, primary_key=True)
+    platform_id = db.Column(db.Integer, db.ForeignKey("platforms.id"), nullable=False)
+    label = db.Column(db.String(200), nullable=False)
+    amount = db.Column(db.Float, nullable=True)
+    periodicity = db.Column(db.String(20), nullable=False, default=BillingPeriodicity.UNIQUE)
+    start_date = db.Column(db.Date, nullable=True)
+    end_date = db.Column(db.Date, nullable=True)
+    notes = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+
+class PresaleStatus:
+    EN_COURS = "EN_COURS"
+    EN_ATTENTE = "EN_ATTENTE"
+    GAGNE = "GAGNE"
+    PERDU = "PERDU"
+    ALL = [EN_COURS, EN_ATTENTE, GAGNE, PERDU]
+    LABELS = {
+        EN_COURS: "En cours",
+        EN_ATTENTE: "En attente",
+        GAGNE: "Gagné",
+        PERDU: "Perdu",
+    }
+
+
+class Presale(db.Model):
+    """Opportunité avant-vente, indépendante d'une plateforme existante."""
+
+    __tablename__ = "presales"
+
+    id = db.Column(db.Integer, primary_key=True)
+    client_name = db.Column(db.String(200), nullable=False)
+    project_name = db.Column(db.String(200), nullable=False)
+    status = db.Column(db.String(20), nullable=False, default=PresaleStatus.EN_COURS)
+    estimated_amount = db.Column(db.Float, nullable=True)
+    contact = db.Column(db.String(200), nullable=True)
+    expected_date = db.Column(db.Date, nullable=True)
+    notes = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+
+class TaskType:
+    INSTALLATION = "INSTALLATION"
+    MAINTENANCE = "MAINTENANCE"
+    BUILD = "BUILD"
+    ATELIER_TECHNIQUE = "ATELIER_TECHNIQUE"
+    ALL = [INSTALLATION, MAINTENANCE, BUILD, ATELIER_TECHNIQUE]
+    LABELS = {
+        INSTALLATION: "Installation",
+        MAINTENANCE: "Maintenance",
+        BUILD: "Build",
+        ATELIER_TECHNIQUE: "Atelier technique",
+    }
+
+
+class TaskStatus:
+    A_FAIRE = "A_FAIRE"
+    EN_COURS = "EN_COURS"
+    TERMINEE = "TERMINEE"
+    ALL = [A_FAIRE, EN_COURS, TERMINEE]
+    LABELS = {
+        A_FAIRE: "À faire",
+        EN_COURS: "En cours",
+        TERMINEE: "Terminée",
+    }
+
+
+class Task(db.Model):
+    __tablename__ = "tasks"
+
+    id = db.Column(db.Integer, primary_key=True)
+    platform_id = db.Column(db.Integer, db.ForeignKey("platforms.id"), nullable=True)
+    task_type = db.Column(db.String(30), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    status = db.Column(db.String(20), nullable=False, default=TaskStatus.A_FAIRE)
+    assigned_to = db.Column(db.String(200), nullable=True)
+    due_date = db.Column(db.Date, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)

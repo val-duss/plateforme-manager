@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}{{ "Modifier" if entry else "Nouvelle" }} ligne de facturation — {{ platform.name }}{% endblock %}
+{% block content %}
+  <div class="breadcrumb"><a href="{{ url_for('main.platform_detail', platform_id=platform.id) }}">← {{ platform.name }}</a></div>
+
+  <h1>{{ "Modifier la ligne de facturation" if entry else "Nouvelle ligne de facturation" }}</h1>
+
+  {% set data = form_data if form_data is not none else entry %}
+  <form class="card" method="post">
+    <div class="form-grid">
+      <div class="field">
+        <label for="label">Libellé *</label>
+        <input type="text" id="label" name="label" required placeholder="Ex : Forfait maintenance annuel"
+               value="{{ data.label if data else '' }}">
+      </div>
+      <div class="form-row">
+        <div class="field">
+          <label for="amount">Montant (€)</label>
+          <input type="number" id="amount" name="amount" min="0" step="0.01" value="{{ data.amount if data and data.amount is not none else '' }}">
+        </div>
+        <div class="field">
+          <label for="periodicity">Périodicité *</label>
+          <select id="periodicity" name="periodicity" required>
+            {% for value in periodicities.ALL %}
+              <option value="{{ value }}" {{ "selected" if data and data.periodicity == value else "" }}>{{ periodicities.LABELS[value] }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="field">
+          <label for="start_date">Date de début</label>
+          <input type="date" id="start_date" name="start_date" value="{{ (data.start_date if data else '') or '' }}">
+        </div>
+        <div class="field">
+          <label for="end_date">Date de fin</label>
+          <input type="date" id="end_date" name="end_date" value="{{ (data.end_date if data else '') or '' }}">
+        </div>
+      </div>
+      <div class="field">
+        <label for="notes">Notes</label>
+        <textarea id="notes" name="notes">{{ data.notes if data else '' }}</textarea>
+      </div>
+      <div class="actions">
+        <button class="btn btn-primary" type="submit">Enregistrer</button>
+        <a class="btn" href="{{ url_for('main.platform_detail', platform_id=platform.id) }}">Annuler</a>
+      </div>
+    </div>
+  </form>
+{% endblock %}

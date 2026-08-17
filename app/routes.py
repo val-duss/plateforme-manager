@@ -1,11 +1,15 @@
 import json
 import os
-from datetime import datetime
+from datetime import date, datetime
 
-from flask import Blueprint, abort, flash, redirect, render_template, request, send_from_directory, url_for
+from flask import Blueprint, abort, flash, redirect, render_template, request, send_from_directory, session, url_for
+from werkzeug.security import check_password_hash, generate_password_hash
 
 from .models import (
+    AppSettings,
     AwsSizing,
+    BillingEntry,
+    BillingPeriodicity,
     Environment,
     EnvType,
     InfraKind,
@@ -13,9 +17,14 @@ from .models import (
     Operation,
     OperationType,
     Platform,
+    Presale,
+    PresaleStatus,
     Procedure,
     ProcedureStep,
     ProcedureStepTest,
+    Task,
+    TaskStatus,
+    TaskType,
     VMSizing,
     db,
 )
@@ -27,11 +36,68 @@ bp = Blueprint("main", __name__)
 APP_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 WINDOWS_SCRIPTS = {
-    "demarrer-application.sh": "Script shell (WSL/Linux/macOS) : démarre l'application (construit l'image si besoin) et ouvre le navigateur.",
+    "demarrer-application.sh": "Script shell (WSL/Linux/macOS) : démarre l'application (construit l'image si besoin) et l'ouvre dans sa propre fenêtre.",
     "mettre-a-jour-et-rebuild.sh": "Script shell (WSL/Linux/macOS) : récupère les dernières modifications (git pull) puis reconstruit et redémarre l'application.",
     "demarrer-application.bat": "Raccourci Windows : délègue à WSL et exécute demarrer-application.sh.",
     "mettre-a-jour-et-rebuild.bat": "Raccourci Windows : délègue à WSL et exécute mettre-a-jour-et-rebuild.sh.",
 }
+
+
+# --- Authentification par PIN -----------------------------------------
+
+
+@bp.before_request
+def require_pin():
+    if request.endpoint == "main.login":
+        return
+    if not session.get("authenticated"):
+        return redirect(url_for("main.login", next=request.path))
+
+
+@bp.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        pin = request.form.get("pin", "").strip()
+        settings = AppSettings.query.get(1)
+        if settings and check_password_hash(settings.pin_hash, pin):
+            session["authenticated"] = True
+            next_path = request.form.get("next") or url_for("main.index")
+            return redirect(next_path)
+        flash("Code PIN incorrect.", "error")
+
+    next_path = request.args.get("next", "")
+    return render_template("login.html", next_path=next_path)
+
+
+@bp.route("/logout", methods=["POST"])
+def logout():
+    session.pop("authenticated", None)
+    flash("Vous avez été déconnecté.", "success")
+    return redirect(url_for("main.login"))
+
+
+@bp.route("/parametres", methods=["GET", "POST"])
+def settings_page():
+    settings = AppSettings.query.get(1)
+
+    if request.method == "POST":
+        current_pin = request.form.get("current_pin", "").strip()
+        new_pin = request.form.get("new_pin", "").strip()
+        confirm_pin = request.form.get("confirm_pin", "").strip()
+
+        if not check_password_hash(settings.pin_hash, current_pin):
+            flash("Le PIN actuel est incorrect.", "error")
+        elif not (new_pin.isdigit() and len(new_pin) == 4):
+            flash("Le nouveau PIN doit être composé de 4 chiffres.", "error")
+        elif new_pin != confirm_pin:
+            flash("La confirmation ne correspond pas au nouveau PIN.", "error")
+        else:
+            settings.pin_hash = generate_password_hash(new_pin)
+            db.session.commit()
+            flash("PIN mis à jour.", "success")
+            return redirect(url_for("main.settings_page"))
+
+    return render_template("settings.html")
 
 
 def parse_int(value):
@@ -44,6 +110,13 @@ def parse_int(value):
 def parse_float(value):
     try:
         return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def parse_date(value):
+    try:
+        return datetime.strptime(value, "%Y-%m-%d").date()
     except (TypeError, ValueError):
         return None
 
@@ -690,3 +763,265 @@ def tools_download(filename):
     if filename not in WINDOWS_SCRIPTS:
         abort(404)
     return send_from_directory(APP_ROOT, filename, as_attachment=True)
+
+
+# --- Facturation (par plateforme) --------------------------------------
+
+
+@bp.route("/platforms/<int:platform_id>/facturation/new", methods=["GET", "POST"])
+def billing_new(platform_id):
+    platform = Platform.query.get_or_404(platform_id)
+
+    if request.method == "POST":
+        label = request.form.get("label", "").strip()
+        amount = parse_float(request.form.get("amount"))
+        periodicity = request.form.get("periodicity")
+        start_date = parse_date(request.form.get("start_date"))
+        end_date = parse_date(request.form.get("end_date"))
+        notes = request.form.get("notes", "").strip()
+
+        if not label or periodicity not in BillingPeriodicity.ALL:
+            flash("Merci de renseigner un libellé et une périodicité valide.", "error")
+            return render_template(
+                "billing_form.html", platform=platform, entry=None, periodicities=BillingPeriodicity, form_data=request.form
+            )
+
+        platform.billing_entries.append(
+            BillingEntry(
+                label=label,
+                amount=amount,
+                periodicity=periodicity,
+                start_date=start_date,
+                end_date=end_date,
+                notes=notes or None,
+            )
+        )
+        db.session.commit()
+        flash("Ligne de facturation ajoutée.", "success")
+        return redirect(url_for("main.platform_detail", platform_id=platform.id))
+
+    return render_template(
+        "billing_form.html", platform=platform, entry=None, periodicities=BillingPeriodicity, form_data={}
+    )
+
+
+@bp.route("/facturation/<int:entry_id>/edit", methods=["GET", "POST"])
+def billing_edit(entry_id):
+    entry = BillingEntry.query.get_or_404(entry_id)
+    platform = entry.platform
+
+    if request.method == "POST":
+        label = request.form.get("label", "").strip()
+        amount = parse_float(request.form.get("amount"))
+        periodicity = request.form.get("periodicity")
+        start_date = parse_date(request.form.get("start_date"))
+        end_date = parse_date(request.form.get("end_date"))
+        notes = request.form.get("notes", "").strip()
+
+        if not label or periodicity not in BillingPeriodicity.ALL:
+            flash("Merci de renseigner un libellé et une périodicité valide.", "error")
+            return redirect(url_for("main.billing_edit", entry_id=entry.id))
+
+        entry.label = label
+        entry.amount = amount
+        entry.periodicity = periodicity
+        entry.start_date = start_date
+        entry.end_date = end_date
+        entry.notes = notes or None
+        db.session.commit()
+        flash("Ligne de facturation mise à jour.", "success")
+        return redirect(url_for("main.platform_detail", platform_id=platform.id))
+
+    return render_template(
+        "billing_form.html", platform=platform, entry=entry, periodicities=BillingPeriodicity, form_data=None
+    )
+
+
+@bp.route("/facturation/<int:entry_id>/delete", methods=["POST"])
+def billing_delete(entry_id):
+    entry = BillingEntry.query.get_or_404(entry_id)
+    platform_id = entry.platform_id
+    db.session.delete(entry)
+    db.session.commit()
+    flash("Ligne de facturation supprimée.", "success")
+    return redirect(url_for("main.platform_detail", platform_id=platform_id))
+
+
+# --- Avant-ventes (global) -----------------------------------------------
+
+
+@bp.route("/avant-ventes")
+def presales_list():
+    presales = Presale.query.order_by(Presale.created_at.desc()).all()
+    return render_template("presales_list.html", presales=presales)
+
+
+@bp.route("/avant-ventes/new", methods=["GET", "POST"])
+def presale_new():
+    if request.method == "POST":
+        client_name = request.form.get("client_name", "").strip()
+        project_name = request.form.get("project_name", "").strip()
+        status = request.form.get("status")
+        estimated_amount = parse_float(request.form.get("estimated_amount"))
+        contact = request.form.get("contact", "").strip()
+        expected_date = parse_date(request.form.get("expected_date"))
+        notes = request.form.get("notes", "").strip()
+
+        if not client_name or not project_name or status not in PresaleStatus.ALL:
+            flash("Merci de renseigner un client, un projet et un statut valide.", "error")
+            return render_template("presale_form.html", presale=None, form_data=request.form)
+
+        presale = Presale(
+            client_name=client_name,
+            project_name=project_name,
+            status=status,
+            estimated_amount=estimated_amount,
+            contact=contact or None,
+            expected_date=expected_date,
+            notes=notes or None,
+        )
+        db.session.add(presale)
+        db.session.commit()
+        flash("Opportunité créée.", "success")
+        return redirect(url_for("main.presales_list"))
+
+    return render_template("presale_form.html", presale=None, form_data={})
+
+
+@bp.route("/avant-ventes/<int:presale_id>/edit", methods=["GET", "POST"])
+def presale_edit(presale_id):
+    presale = Presale.query.get_or_404(presale_id)
+
+    if request.method == "POST":
+        client_name = request.form.get("client_name", "").strip()
+        project_name = request.form.get("project_name", "").strip()
+        status = request.form.get("status")
+        estimated_amount = parse_float(request.form.get("estimated_amount"))
+        contact = request.form.get("contact", "").strip()
+        expected_date = parse_date(request.form.get("expected_date"))
+        notes = request.form.get("notes", "").strip()
+
+        if not client_name or not project_name or status not in PresaleStatus.ALL:
+            flash("Merci de renseigner un client, un projet et un statut valide.", "error")
+            return redirect(url_for("main.presale_edit", presale_id=presale.id))
+
+        presale.client_name = client_name
+        presale.project_name = project_name
+        presale.status = status
+        presale.estimated_amount = estimated_amount
+        presale.contact = contact or None
+        presale.expected_date = expected_date
+        presale.notes = notes or None
+        db.session.commit()
+        flash("Opportunité mise à jour.", "success")
+        return redirect(url_for("main.presales_list"))
+
+    return render_template("presale_form.html", presale=presale, form_data=None)
+
+
+@bp.route("/avant-ventes/<int:presale_id>/delete", methods=["POST"])
+def presale_delete(presale_id):
+    presale = Presale.query.get_or_404(presale_id)
+    db.session.delete(presale)
+    db.session.commit()
+    flash("Opportunité supprimée.", "success")
+    return redirect(url_for("main.presales_list"))
+
+
+# --- Tâches (global, avec plateforme optionnelle) -------------------------
+
+
+@bp.route("/taches")
+def tasks_list():
+    tasks = Task.query.order_by(Task.status, Task.due_date.is_(None), Task.due_date).all()
+    return render_template("tasks_list.html", tasks=tasks)
+
+
+@bp.route("/taches/new", methods=["GET", "POST"])
+def task_new():
+    platform_id = request.args.get("platform_id", type=int)
+    platforms = Platform.query.order_by(Platform.name).all()
+
+    if request.method == "POST":
+        task_type = request.form.get("task_type")
+        title = request.form.get("title", "").strip()
+        description = request.form.get("description", "").strip()
+        status = request.form.get("status")
+        assigned_to = request.form.get("assigned_to", "").strip()
+        due_date = parse_date(request.form.get("due_date"))
+        form_platform_id = request.form.get("platform_id") or None
+
+        if task_type not in TaskType.ALL or not title or status not in TaskStatus.ALL:
+            flash("Merci de renseigner un type, un titre et un statut valides.", "error")
+            return render_template(
+                "task_form.html", task=None, platforms=platforms, form_data=request.form
+            )
+
+        task = Task(
+            platform_id=int(form_platform_id) if form_platform_id else None,
+            task_type=task_type,
+            title=title,
+            description=description or None,
+            status=status,
+            assigned_to=assigned_to or None,
+            due_date=due_date,
+        )
+        db.session.add(task)
+        db.session.commit()
+        flash("Tâche créée.", "success")
+        if task.platform_id:
+            return redirect(url_for("main.platform_detail", platform_id=task.platform_id))
+        return redirect(url_for("main.tasks_list"))
+
+    return render_template(
+        "task_form.html",
+        task=None,
+        platforms=platforms,
+        form_data={"platform_id": str(platform_id)} if platform_id else {},
+    )
+
+
+@bp.route("/taches/<int:task_id>/edit", methods=["GET", "POST"])
+def task_edit(task_id):
+    task = Task.query.get_or_404(task_id)
+    platforms = Platform.query.order_by(Platform.name).all()
+
+    if request.method == "POST":
+        task_type = request.form.get("task_type")
+        title = request.form.get("title", "").strip()
+        description = request.form.get("description", "").strip()
+        status = request.form.get("status")
+        assigned_to = request.form.get("assigned_to", "").strip()
+        due_date = parse_date(request.form.get("due_date"))
+        form_platform_id = request.form.get("platform_id") or None
+
+        if task_type not in TaskType.ALL or not title or status not in TaskStatus.ALL:
+            flash("Merci de renseigner un type, un titre et un statut valides.", "error")
+            return redirect(url_for("main.task_edit", task_id=task.id))
+
+        task.task_type = task_type
+        task.title = title
+        task.description = description or None
+        task.status = status
+        task.assigned_to = assigned_to or None
+        task.due_date = due_date
+        task.platform_id = int(form_platform_id) if form_platform_id else None
+        db.session.commit()
+        flash("Tâche mise à jour.", "success")
+        return redirect(url_for("main.tasks_list"))
+
+    return render_template("task_form.html", task=task, platforms=platforms, form_data=None)
+
+
+@bp.route("/taches/<int:task_id>/delete", methods=["POST"])
+def task_delete(task_id):
+    task = Task.query.get_or_404(task_id)
+    redirect_platform_id = task.platform_id
+    db.session.delete(task)
+    db.session.commit()
+    flash("Tâche supprimée.", "success")
+    return redirect(
+        url_for("main.platform_detail", platform_id=redirect_platform_id)
+        if redirect_platform_id
+        else url_for("main.tasks_list")
+    )

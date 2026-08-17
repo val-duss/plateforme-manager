@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Tâches — Plateforme Manager{% endblock %}
+{% block content %}
+  <div class="page-header">
+    <div>
+      <h1>Tâches</h1>
+      <p class="subtitle">Installations, maintenances, builds et ateliers techniques, liés ou non à une plateforme.</p>
+    </div>
+    <a class="btn btn-primary" href="{{ url_for('main.task_new') }}">+ Nouvelle tâche</a>
+  </div>
+
+  {% if tasks %}
+    <div class="card" style="padding:0; overflow-x:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>Statut</th>
+            <th>Type</th>
+            <th>Titre</th>
+            <th>Plateforme</th>
+            <th>Assigné à</th>
+            <th>Échéance</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for task in tasks %}
+            <tr>
+              <td><span class="badge badge-task-status-{{ task.status }}">{{ TaskStatus.LABELS[task.status] }}</span></td>
+              <td><span class="badge badge-task-type">{{ TaskType.LABELS[task.task_type] }}</span></td>
+              <td>
+                <a href="{{ url_for('main.task_edit', task_id=task.id) }}">{{ task.title }}</a>
+                {% if task.description %}<div class="muted small">{{ task.description }}</div>{% endif %}
+              </td>
+              <td>
+                {% if task.platform %}
+                  <a href="{{ url_for('main.platform_detail', platform_id=task.platform.id) }}">{{ task.platform.name }}</a>
+                {% else %}
+                  <span class="muted small">—</span>
+                {% endif %}
+              </td>
+              <td>{{ task.assigned_to or "—" }}</td>
+              <td>{{ task.due_date.strftime('%d/%m/%Y') if task.due_date else "—" }}</td>
+              <td>
+                <form class="inline-form" method="post" action="{{ url_for('main.task_delete', task_id=task.id) }}"
+                      onsubmit="return confirm('Supprimer cette tâche ?');">
+                  <button type="submit" class="btn btn-danger btn-sm">Suppr.</button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="card empty-state">
+      <p>Aucune tâche pour le moment.</p>
+    </div>
+  {% endif %}
+{% endblock %}

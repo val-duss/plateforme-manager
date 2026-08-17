@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Avant-ventes — Plateforme Manager{% endblock %}
+{% block content %}
+  <div class="page-header">
+    <div>
+      <h1>Avant-ventes</h1>
+      <p class="subtitle">Opportunités commerciales, avant la création d'une plateforme.</p>
+    </div>
+    <a class="btn btn-primary" href="{{ url_for('main.presale_new') }}">+ Nouvelle opportunité</a>
+  </div>
+
+  {% if presales %}
+    <div class="card" style="padding:0; overflow-x:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>Client</th>
+            <th>Projet</th>
+            <th>Statut</th>
+            <th>Montant estimé</th>
+            <th>Contact</th>
+            <th>Échéance</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for presale in presales %}
+            <tr>
+              <td><a href="{{ url_for('main.presale_edit', presale_id=presale.id) }}">{{ presale.client_name }}</a></td>
+              <td>{{ presale.project_name }}</td>
+              <td><span class="badge badge-presale-{{ presale.status }}">{{ PresaleStatus.LABELS[presale.status] }}</span></td>
+              <td>{{ "%.2f €"|format(presale.estimated_amount) if presale.estimated_amount is not none else "—" }}</td>
+              <td>{{ presale.contact or "—" }}</td>
+              <td>{{ presale.expected_date.strftime('%d/%m/%Y') if presale.expected_date else "—" }}</td>
+              <td>
+                <form class="inline-form" method="post" action="{{ url_for('main.presale_delete', presale_id=presale.id) }}"
+                      onsubmit="return confirm('Supprimer cette opportunité ?');">
+                  <button type="submit" class="btn btn-danger btn-sm">Suppr.</button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="card empty-state">
+      <p>Aucune opportunité avant-vente pour le moment.</p>
+    </div>
+  {% endif %}
+{% endblock %}

@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}{{ "Modifier" if task else "Nouvelle" }} tâche — Plateforme Manager{% endblock %}
+{% block content %}
+  <div class="breadcrumb"><a href="{{ url_for('main.tasks_list') }}">← Tâches</a></div>
+
+  <h1>{{ "Modifier la tâche" if task else "Nouvelle tâche" }}</h1>
+
+  {% set data = form_data if form_data is not none else task %}
+  <form class="card" method="post">
+    <div class="form-grid">
+      <div class="form-row">
+        <div class="field">
+          <label for="task_type">Type *</label>
+          <select id="task_type" name="task_type" required>
+            {% for value in TaskType.ALL %}
+              <option value="{{ value }}" {{ "selected" if data and data.task_type == value else "" }}>{{ TaskType.LABELS[value] }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="status">Statut *</label>
+          <select id="status" name="status" required>
+            {% for value in TaskStatus.ALL %}
+              <option value="{{ value }}" {{ "selected" if (data and data.status == value) or (not data and value == TaskStatus.A_FAIRE) else "" }}>{{ TaskStatus.LABELS[value] }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="title">Titre *</label>
+        <input type="text" id="title" name="title" required value="{{ data.title if data else '' }}">
+      </div>
+
+      <div class="field">
+        <label for="description">Description</label>
+        <textarea id="description" name="description">{{ data.description if data else '' }}</textarea>
+      </div>
+
+      <div class="form-row">
+        <div class="field">
+          <label for="platform_id">Plateforme</label>
+          <select id="platform_id" name="platform_id">
+            <option value="">Aucune</option>
+            {% for platform in platforms %}
+              <option value="{{ platform.id }}" {{ "selected" if data and (data.platform_id | string) == (platform.id | string) else "" }}>{{ platform.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="assigned_to">Assigné à</label>
+          <input type="text" id="assigned_to" name="assigned_to" value="{{ data.assigned_to if data else '' }}">
+        </div>
+        <div class="field">
+          <label for="due_date">Échéance</label>
+          <input type="date" id="due_date" name="due_date" value="{{ (data.due_date if data else '') or '' }}">
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-primary" type="submit">Enregistrer</button>
+        <a class="btn" href="{{ url_for('main.tasks_list') }}">Annuler</a>
+      </div>
+    </div>
+  </form>
+{% endblock %}

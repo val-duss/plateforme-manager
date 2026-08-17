@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Paramètres — Plateforme Manager{% endblock %}
+{% block content %}
+  <h1>Paramètres</h1>
+
+  <div class="card">
+    <h3>Changer le code PIN</h3>
+    <form method="post">
+      <div class="form-grid">
+        <div class="field">
+          <label for="current_pin">PIN actuel</label>
+          <input type="password" id="current_pin" name="current_pin" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" required>
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label for="new_pin">Nouveau PIN (4 chiffres)</label>
+            <input type="password" id="new_pin" name="new_pin" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" required>
+          </div>
+          <div class="field">
+            <label for="confirm_pin">Confirmer le nouveau PIN</label>
+            <input type="password" id="confirm_pin" name="confirm_pin" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" required>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="btn btn-primary" type="submit">Enregistrer</button>
+        </div>
+      </div>
+    </form>
+  </div>
+{% endblock %}

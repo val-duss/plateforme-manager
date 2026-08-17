@@ -110,6 +110,102 @@
 
   <div class="section">
     <div class="section-header">
+      <h2>Tâches</h2>
+      <a class="btn btn-primary btn-sm" href="{{ url_for('main.task_new', platform_id=platform.id) }}">+ Nouvelle tâche</a>
+    </div>
+
+    {% if platform.tasks %}
+      <div class="card" style="padding:0; overflow-x:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Statut</th>
+              <th>Type</th>
+              <th>Titre</th>
+              <th>Assigné à</th>
+              <th>Échéance</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for task in platform.tasks %}
+              <tr>
+                <td><span class="badge badge-task-status-{{ task.status }}">{{ TaskStatus.LABELS[task.status] }}</span></td>
+                <td><span class="badge badge-task-type">{{ TaskType.LABELS[task.task_type] }}</span></td>
+                <td>
+                  <a href="{{ url_for('main.task_edit', task_id=task.id) }}">{{ task.title }}</a>
+                  {% if task.description %}<div class="muted small">{{ task.description }}</div>{% endif %}
+                </td>
+                <td>{{ task.assigned_to or "—" }}</td>
+                <td>{{ task.due_date.strftime('%d/%m/%Y') if task.due_date else "—" }}</td>
+                <td>
+                  <form class="inline-form" method="post" action="{{ url_for('main.task_delete', task_id=task.id) }}"
+                        onsubmit="return confirm('Supprimer cette tâche ?');">
+                    <button type="submit" class="btn btn-danger btn-sm">Suppr.</button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="card empty-state">
+        <p>Aucune tâche pour cette plateforme.</p>
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <h2>Facturation</h2>
+      <a class="btn btn-primary btn-sm" href="{{ url_for('main.billing_new', platform_id=platform.id) }}">+ Nouvelle ligne</a>
+    </div>
+
+    {% if platform.billing_entries %}
+      <div class="card" style="padding:0; overflow-x:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Libellé</th>
+              <th>Montant</th>
+              <th>Périodicité</th>
+              <th>Début</th>
+              <th>Fin</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for entry in platform.billing_entries %}
+              <tr>
+                <td>
+                  <a href="{{ url_for('main.billing_edit', entry_id=entry.id) }}">{{ entry.label }}</a>
+                  {% if entry.notes %}<div class="muted small">{{ entry.notes }}</div>{% endif %}
+                </td>
+                <td>{{ "%.2f €"|format(entry.amount) if entry.amount is not none else "—" }}</td>
+                <td>{{ BillingPeriodicity.LABELS[entry.periodicity] }}</td>
+                <td>{{ entry.start_date.strftime('%d/%m/%Y') if entry.start_date else "—" }}</td>
+                <td>{{ entry.end_date.strftime('%d/%m/%Y') if entry.end_date else "—" }}</td>
+                <td>
+                  <form class="inline-form" method="post" action="{{ url_for('main.billing_delete', entry_id=entry.id) }}"
+                        onsubmit="return confirm('Supprimer cette ligne de facturation ?');">
+                    <button type="submit" class="btn btn-danger btn-sm">Suppr.</button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="card empty-state">
+        <p>Aucune ligne de facturation pour cette plateforme.</p>
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="section">
+    <div class="section-header">
       <h2>Journal des opérations</h2>
       <a class="btn btn-primary btn-sm" href="{{ url_for('main.operation_new', platform_id=platform.id) }}">+ Nouvelle opération</a>
     </div>

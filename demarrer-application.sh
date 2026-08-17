@@ -32,15 +32,39 @@ echo "Attente du demarrage de l'application..."
 sleep 5
 
 URL="http://localhost:8000/"
-echo "Ouverture du navigateur ($URL)..."
-if command -v wslview >/dev/null 2>&1; then
-    wslview "$URL" >/dev/null 2>&1 || true
-elif command -v cmd.exe >/dev/null 2>&1; then
-    cmd.exe /c start "" "$URL" >/dev/null 2>&1 || true
-elif command -v explorer.exe >/dev/null 2>&1; then
-    explorer.exe "$URL" >/dev/null 2>&1 || true
+
+# Ouvre l'application dans sa propre fenetre (mode "app" : sans barre d'adresse,
+# ni onglets, ni autres elements de navigateur), plutot que dans un onglet classique.
+# Essaye Edge puis Chrome en mode application, avec repli sur le navigateur par defaut.
+open_app_window() {
+    local url="$1"
+
+    if command -v cmd.exe >/dev/null 2>&1; then
+        if cmd.exe /c start msedge --app="$url" >/dev/null 2>&1; then return 0; fi
+        if cmd.exe /c start chrome --app="$url" >/dev/null 2>&1; then return 0; fi
+        if cmd.exe /c start "" "$url" >/dev/null 2>&1; then return 0; fi
+    fi
+
+    for browser in google-chrome chromium chromium-browser microsoft-edge; do
+        if command -v "$browser" >/dev/null 2>&1; then
+            "$browser" --app="$url" >/dev/null 2>&1 &
+            disown
+            return 0
+        fi
+    done
+
+    if command -v wslview >/dev/null 2>&1 && wslview "$url" >/dev/null 2>&1; then return 0; fi
+    if command -v xdg-open >/dev/null 2>&1 && xdg-open "$url" >/dev/null 2>&1; then return 0; fi
+    if command -v open >/dev/null 2>&1 && open "$url" >/dev/null 2>&1; then return 0; fi
+
+    return 1
+}
+
+echo "Ouverture de l'application dans sa propre fenetre ($URL)..."
+if open_app_window "$URL"; then
+    echo "Fenetre ouverte."
 else
-    echo "Ouvrez manuellement l'URL ci-dessus dans votre navigateur."
+    echo "Impossible d'ouvrir automatiquement une fenetre. Ouvrez manuellement : $URL"
 fi
 
 echo

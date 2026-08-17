@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}{{ "Modifier" if presale else "Nouvelle" }} opportunité — Plateforme Manager{% endblock %}
+{% block content %}
+  <div class="breadcrumb"><a href="{{ url_for('main.presales_list') }}">← Avant-ventes</a></div>
+
+  <h1>{{ "Modifier l'opportunité" if presale else "Nouvelle opportunité" }}</h1>
+
+  {% set data = form_data if form_data is not none else presale %}
+  <form class="card" method="post">
+    <div class="form-grid">
+      <div class="form-row">
+        <div class="field">
+          <label for="client_name">Client / prospect *</label>
+          <input type="text" id="client_name" name="client_name" required value="{{ data.client_name if data else '' }}">
+        </div>
+        <div class="field">
+          <label for="project_name">Projet *</label>
+          <input type="text" id="project_name" name="project_name" required value="{{ data.project_name if data else '' }}">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="field">
+          <label for="status">Statut *</label>
+          <select id="status" name="status" required>
+            {% for value in PresaleStatus.ALL %}
+              <option value="{{ value }}" {{ "selected" if data and data.status == value else "" }}>{{ PresaleStatus.LABELS[value] }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="estimated_amount">Montant estimé (€)</label>
+          <input type="number" id="estimated_amount" name="estimated_amount" min="0" step="0.01"
+                 value="{{ data.estimated_amount if data and data.estimated_amount is not none else '' }}">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="field">
+          <label for="contact">Contact</label>
+          <input type="text" id="contact" name="contact" value="{{ data.contact if data else '' }}">
+        </div>
+        <div class="field">
+          <label for="expected_date">Échéance prévue</label>
+          <input type="date" id="expected_date" name="expected_date" value="{{ (data.expected_date if data else '') or '' }}">
+        </div>
+      </div>
+      <div class="field">
+        <label for="notes">Notes</label>
+        <textarea id="notes" name="notes">{{ data.notes if data else '' }}</textarea>
+      </div>
+      <div class="actions">
+        <button class="btn btn-primary" type="submit">Enregistrer</button>
+        <a class="btn" href="{{ url_for('main.presales_list') }}">Annuler</a>
+      </div>
+    </div>
+  </form>
+{% endblock %}
