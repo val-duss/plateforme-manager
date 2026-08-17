@@ -291,6 +291,14 @@ textarea { resize: vertical; min-height: 70px; }
 
 .inline-add-row input[type=text] { flex: 1; }
 
+code {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 0.85em;
+}
+
 fieldset {
   border: 1px solid var(--border);
   border-radius: var(--radius);

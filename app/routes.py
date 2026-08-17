@@ -1,7 +1,8 @@
 import json
+import os
 from datetime import datetime
 
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, abort, flash, redirect, render_template, request, send_from_directory, url_for
 
 from .models import (
     AwsSizing,
@@ -21,6 +22,14 @@ from .models import (
 from .sizing import diff_snapshots, snapshot_environment, summarize_diff
 
 bp = Blueprint("main", __name__)
+
+# Racine du projet (parent du package app/), où vivent les scripts Windows.
+APP_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+WINDOWS_SCRIPTS = {
+    "demarrer-application.bat": "Démarre l'application (construit l'image si besoin) et ouvre le navigateur.",
+    "mettre-a-jour-et-rebuild.bat": "Récupère les dernières modifications (git pull) puis reconstruit et redémarre l'application.",
+}
 
 
 def parse_int(value):
@@ -664,3 +673,18 @@ def step_test_delete(test_id):
     db.session.commit()
     flash("Test supprimé.", "success")
     return redirect(url_for("main.procedure_edit", procedure_id=procedure_id))
+
+
+# --- Outils Windows ----------------------------------------------------
+
+
+@bp.route("/outils")
+def tools():
+    return render_template("tools.html", scripts=WINDOWS_SCRIPTS)
+
+
+@bp.route("/outils/telecharger/<path:filename>")
+def tools_download(filename):
+    if filename not in WINDOWS_SCRIPTS:
+        abort(404)
+    return send_from_directory(APP_ROOT, filename, as_attachment=True)

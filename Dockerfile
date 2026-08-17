@@ -9,6 +9,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app/ ./app/
 COPY wsgi.py .
+COPY demarrer-application.bat mettre-a-jour-et-rebuild.bat ./
 
 RUN mkdir -p /data && chown -R appuser:appuser /app /data
 

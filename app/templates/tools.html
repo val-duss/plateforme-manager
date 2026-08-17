@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Outils — Plateforme Manager{% endblock %}
+{% block content %}
+  <div class="page-header">
+    <div>
+      <h1>Outils Windows</h1>
+      <p class="subtitle">Scripts pour démarrer et mettre à jour l'application sans ligne de commande.</p>
+    </div>
+  </div>
+
+  <div class="card-list">
+    {% for filename, description in scripts.items() %}
+      <div class="card">
+        <h3>{{ filename }}</h3>
+        <p class="small muted">{{ description }}</p>
+        <div class="actions">
+          <a class="btn btn-primary btn-sm" href="{{ url_for('main.tools_download', filename=filename) }}">Télécharger</a>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+  <div class="card">
+    <h3>Utilisation</h3>
+    <p class="small">
+      Placez ces fichiers à la racine du dépôt cloné, à côté de <code>docker-compose.yml</code>
+      (ils y sont déjà si vous avez cloné le dépôt Git — ce téléchargement sert surtout à récupérer
+      une copie à jour). Double-cliquez sur <code>demarrer-application.bat</code> pour lancer
+      l'application, ou sur <code>mettre-a-jour-et-rebuild.bat</code> pour récupérer les dernières
+      modifications et reconstruire les conteneurs Docker.
+    </p>
+    <p class="small muted">
+      Prérequis : Docker Desktop et Git installés et accessibles depuis l'invite de commandes Windows.
+    </p>
+  </div>
+{% endblock %}
