@@ -4,48 +4,40 @@ chcp 65001 >nul
 cd /d "%~dp0"
 
 echo ============================================
-echo   Plateforme Manager - Demarrage
+echo   Plateforme Manager - Demarrage (via WSL)
 echo ============================================
 echo.
 
-where docker >nul 2>&1
+where wsl >nul 2>&1
 if errorlevel 1 (
-    echo [ERREUR] Docker n'est pas installe ou n'est pas dans le PATH.
-    echo Installez Docker Desktop : https://www.docker.com/products/docker-desktop
+    echo [ERREUR] WSL n'est pas installe ou n'est pas dans le PATH.
+    echo Voir : https://learn.microsoft.com/windows/wsl/install
     echo.
     pause
     exit /b 1
 )
 
-docker info >nul 2>&1
-if errorlevel 1 (
-    echo [ERREUR] Docker Desktop ne semble pas demarre.
-    echo Lancez Docker Desktop puis reessayez.
+set "WSL_PATH="
+for /f "usebackq delims=" %%p in (`wsl wslpath -a "%~dp0"`) do set "WSL_PATH=%%p"
+
+if "%WSL_PATH%"=="" (
+    echo [ERREUR] Impossible de determiner le chemin WSL de ce dossier.
+    echo Verifiez que WSL est bien configure ^(commande : wsl --status^).
     echo.
     pause
     exit /b 1
 )
 
-echo Demarrage des conteneurs (construction de l'image si necessaire, cela peut prendre quelques minutes la premiere fois)...
-echo.
-docker compose up -d --build
+wsl bash -lc "cd '%WSL_PATH%' && ./demarrer-application.sh"
 if errorlevel 1 (
     echo.
     echo [ERREUR] Le demarrage a echoue. Voir les messages ci-dessus.
+    echo Vous pouvez aussi lancer le script directement depuis un terminal WSL :
+    echo   ./demarrer-application.sh
     echo.
     pause
     exit /b 1
 )
 
-echo.
-echo Attente du demarrage de l'application...
-timeout /t 5 /nobreak >nul
-
-echo Ouverture du navigateur...
-start "" http://localhost:8000/
-
-echo.
-echo Plateforme Manager est disponible sur http://localhost:8000/
-echo Cette fenetre peut etre fermee.
 echo.
 pause

@@ -3,8 +3,8 @@
 {% block content %}
   <div class="page-header">
     <div>
-      <h1>Outils Windows</h1>
-      <p class="subtitle">Scripts pour démarrer et mettre à jour l'application sans ligne de commande.</p>
+      <h1>Outils</h1>
+      <p class="subtitle">Scripts pour démarrer et mettre à jour l'application sans taper les commandes à la main.</p>
     </div>
   </div>
 
@@ -21,16 +21,27 @@
   </div>
 
   <div class="card">
-    <h3>Utilisation</h3>
+    <h3>Utilisation recommandée : WSL</h3>
     <p class="small">
-      Placez ces fichiers à la racine du dépôt cloné, à côté de <code>docker-compose.yml</code>
-      (ils y sont déjà si vous avez cloné le dépôt Git — ce téléchargement sert surtout à récupérer
-      une copie à jour). Double-cliquez sur <code>demarrer-application.bat</code> pour lancer
-      l'application, ou sur <code>mettre-a-jour-et-rebuild.bat</code> pour récupérer les dernières
-      modifications et reconstruire les conteneurs Docker.
+      Placez <code>demarrer-application.sh</code> et <code>mettre-a-jour-et-rebuild.sh</code> à la
+      racine du dépôt cloné, à côté de <code>docker-compose.yml</code> (ils y sont déjà si vous avez
+      cloné le dépôt Git). Depuis un terminal WSL, dans ce dossier :
     </p>
+    <pre class="small"><code>chmod +x *.sh
+./demarrer-application.sh</code></pre>
     <p class="small muted">
-      Prérequis : Docker Desktop et Git installés et accessibles depuis l'invite de commandes Windows.
+      Prérequis dans la distribution WSL : Docker (ou l'intégration WSL de Docker Desktop activée)
+      et Git.
+    </p>
+  </div>
+
+  <div class="card">
+    <h3>Double-clic depuis Windows</h3>
+    <p class="small">
+      <code>demarrer-application.bat</code> et <code>mettre-a-jour-et-rebuild.bat</code> font la même
+      chose en un double-clic : ils délèguent automatiquement à WSL et exécutent le script <code>.sh</code>
+      correspondant, sans nécessiter Git ou Docker installés côté Windows. Seul WSL doit être installé
+      (<code>wsl --install</code> depuis une invite de commandes administrateur si besoin).
     </p>
   </div>
 {% endblock %}

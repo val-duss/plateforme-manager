@@ -23,12 +23,14 @@ from .sizing import diff_snapshots, snapshot_environment, summarize_diff
 
 bp = Blueprint("main", __name__)
 
-# Racine du projet (parent du package app/), où vivent les scripts Windows.
+# Racine du projet (parent du package app/), où vivent les scripts de lancement.
 APP_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 WINDOWS_SCRIPTS = {
-    "demarrer-application.bat": "Démarre l'application (construit l'image si besoin) et ouvre le navigateur.",
-    "mettre-a-jour-et-rebuild.bat": "Récupère les dernières modifications (git pull) puis reconstruit et redémarre l'application.",
+    "demarrer-application.sh": "Script shell (WSL/Linux/macOS) : démarre l'application (construit l'image si besoin) et ouvre le navigateur.",
+    "mettre-a-jour-et-rebuild.sh": "Script shell (WSL/Linux/macOS) : récupère les dernières modifications (git pull) puis reconstruit et redémarre l'application.",
+    "demarrer-application.bat": "Raccourci Windows : délègue à WSL et exécute demarrer-application.sh.",
+    "mettre-a-jour-et-rebuild.bat": "Raccourci Windows : délègue à WSL et exécute mettre-a-jour-et-rebuild.sh.",
 }
 
 

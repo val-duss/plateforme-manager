@@ -4,52 +4,40 @@ chcp 65001 >nul
 cd /d "%~dp0"
 
 echo ============================================
-echo   Plateforme Manager - Mise a jour
+echo   Plateforme Manager - Mise a jour (via WSL)
 echo ============================================
 echo.
 
-where git >nul 2>&1
+where wsl >nul 2>&1
 if errorlevel 1 (
-    echo [ERREUR] Git n'est pas installe ou n'est pas dans le PATH.
+    echo [ERREUR] WSL n'est pas installe ou n'est pas dans le PATH.
+    echo Voir : https://learn.microsoft.com/windows/wsl/install
     echo.
     pause
     exit /b 1
 )
 
-where docker >nul 2>&1
-if errorlevel 1 (
-    echo [ERREUR] Docker n'est pas installe ou n'est pas dans le PATH.
-    echo Installez Docker Desktop : https://www.docker.com/products/docker-desktop
+set "WSL_PATH="
+for /f "usebackq delims=" %%p in (`wsl wslpath -a "%~dp0"`) do set "WSL_PATH=%%p"
+
+if "%WSL_PATH%"=="" (
+    echo [ERREUR] Impossible de determiner le chemin WSL de ce dossier.
+    echo Verifiez que WSL est bien configure ^(commande : wsl --status^).
     echo.
     pause
     exit /b 1
 )
 
-echo Recuperation des dernieres modifications de la branche courante...
-echo.
-git pull
+wsl bash -lc "cd '%WSL_PATH%' && ./mettre-a-jour-et-rebuild.sh"
 if errorlevel 1 (
     echo.
-    echo [ERREUR] La mise a jour Git a echoue. Voir les messages ci-dessus.
-    echo ^(en cas de modifications locales en conflit, sauvegardez-les avant de reessayer^)
+    echo [ERREUR] La mise a jour a echoue. Voir les messages ci-dessus.
+    echo Vous pouvez aussi lancer le script directement depuis un terminal WSL :
+    echo   ./mettre-a-jour-et-rebuild.sh
     echo.
     pause
     exit /b 1
 )
 
-echo.
-echo Reconstruction de l'image et redemarrage des conteneurs...
-echo.
-docker compose up -d --build
-if errorlevel 1 (
-    echo.
-    echo [ERREUR] La reconstruction a echoue. Voir les messages ci-dessus.
-    echo.
-    pause
-    exit /b 1
-)
-
-echo.
-echo Mise a jour terminee. L'application est disponible sur http://localhost:8000/
 echo.
 pause

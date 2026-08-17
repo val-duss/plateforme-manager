@@ -15,23 +15,27 @@ docker compose up --build
 
 L'application est ensuite disponible sur http://localhost:8000
 
-## Utilisation sur Windows
+## Utilisation sur Windows (via WSL)
 
-Deux scripts sont fournis à la racine du dépôt pour éviter de passer par la
-ligne de commande :
+L'installation native de Docker/Git sur Windows pouvant poser des soucis,
+l'usage recommandé passe par [WSL](https://learn.microsoft.com/windows/wsl/install)
+(Docker et Git s'installent alors normalement, côté Linux).
 
-- **`demarrer-application.bat`** : démarre (et construit si besoin) les
-  conteneurs Docker, puis ouvre l'application dans le navigateur par défaut.
-  Double-cliquer dessus, ou créer un raccourci sur le bureau pointant vers ce
-  fichier pour un lancement en un clic.
-- **`mettre-a-jour-et-rebuild.bat`** : récupère les derniers changements de la
-  branche courante (`git pull`) puis reconstruit et redémarre les conteneurs
-  Docker.
+Depuis un terminal WSL, à la racine du dépôt :
 
-Prérequis : [Docker Desktop](https://www.docker.com/products/docker-desktop)
-et [Git](https://git-scm.com/download/win) installés et dans le `PATH`. La
-fenêtre de commande reste ouverte à la fin pour voir les éventuelles erreurs ;
-fermez-la ou appuyez sur une touche pour la fermer.
+```bash
+chmod +x *.sh
+./demarrer-application.sh          # démarre (et construit si besoin), puis ouvre le navigateur
+./mettre-a-jour-et-rebuild.sh      # git pull puis reconstruction/redémarrage
+```
+
+Pour un lancement en double-clic depuis l'explorateur Windows sans ouvrir de
+terminal, `demarrer-application.bat` et `mettre-a-jour-et-rebuild.bat` font la
+même chose : ils délèguent automatiquement à WSL et exécutent le script `.sh`
+correspondant (seul WSL doit être installé côté Windows, pas Docker ni Git).
+
+Ces quatre fichiers sont aussi téléchargeables depuis l'application elle-même,
+page **Outils** (`/outils`).
 
 ## Développement local (sans Docker)
 
