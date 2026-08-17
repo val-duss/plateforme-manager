@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_icons.html" import icon_supervision, icon_plus %}
 {% block title %}Supervision — Plateforme Manager{% endblock %}
 {% block content %}
   <div class="page-header">
@@ -6,7 +7,7 @@
       <h1>Supervision</h1>
       <p class="subtitle">Accès rapide aux outils de supervision externes.</p>
     </div>
-    <a class="btn btn-primary" href="{{ url_for('main.supervision_new') }}">+ Ajouter un outil</a>
+    <a class="btn btn-primary" href="{{ url_for('main.supervision_new') }}">{{ icon_plus(16) }}<span>Ajouter un outil</span></a>
   </div>
 
   {% if links %}
@@ -14,11 +15,7 @@
       {% for link in links %}
         <div class="card supervision-tile">
           <a class="supervision-tile-link" href="{{ link.url }}" target="_blank" rel="noopener">
-            <span class="icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M3 12 8 12 10 6 14 18 16 12 21 12"/>
-              </svg>
-            </span>
+            <span class="icon">{{ icon_supervision(26) }}</span>
             <h3>{{ link.name }}</h3>
             <p>{{ link.url }}</p>
           </a>
@@ -35,7 +32,7 @@
   {% else %}
     <div class="card empty-state">
       <p>Aucun outil de supervision enregistré pour le moment.</p>
-      <a class="btn btn-primary" href="{{ url_for('main.supervision_new') }}">Ajouter le premier outil</a>
+      <a class="btn btn-primary" href="{{ url_for('main.supervision_new') }}">{{ icon_plus(16) }}<span>Ajouter le premier outil</span></a>
     </div>
   {% endif %}
 {% endblock %}

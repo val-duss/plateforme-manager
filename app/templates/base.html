@@ -7,22 +7,23 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
+  {% from "_icons.html" import icon_home, icon_platforms, icon_check, icon_tasks, icon_presales, icon_journal, icon_supervision, icon_tools, icon_settings, icon_plus, icon_logout %}
   <header class="topbar">
     <div class="topbar-inner">
       <a class="brand" href="{{ url_for('main.index') }}">Plateforme Manager</a>
       <nav>
-        <a href="{{ url_for('main.index') }}">Accueil</a>
-        <a href="{{ url_for('main.platforms_list') }}">Plateformes</a>
-        <a href="{{ url_for('main.daily_check') }}">Check journalier</a>
-        <a href="{{ url_for('main.tasks_list') }}">Tâches</a>
-        <a href="{{ url_for('main.presales_list') }}">Avant-ventes</a>
-        <a href="{{ url_for('main.journal') }}">Journal</a>
-        <a href="{{ url_for('main.supervision_list') }}">Supervision</a>
-        <a href="{{ url_for('main.tools') }}">Outils</a>
-        <a href="{{ url_for('main.settings_page') }}">Paramètres</a>
-        <a class="btn btn-primary btn-sm" href="{{ url_for('main.platform_new') }}">+ Nouvelle plateforme</a>
+        <a href="{{ url_for('main.index') }}">{{ icon_home(18) }}<span>Accueil</span></a>
+        <a href="{{ url_for('main.platforms_list') }}">{{ icon_platforms(18) }}<span>Plateformes</span></a>
+        <a href="{{ url_for('main.daily_check') }}">{{ icon_check(18) }}<span>Check journalier</span></a>
+        <a href="{{ url_for('main.tasks_list') }}">{{ icon_tasks(18) }}<span>Tâches</span></a>
+        <a href="{{ url_for('main.presales_list') }}">{{ icon_presales(18) }}<span>Avant-ventes</span></a>
+        <a href="{{ url_for('main.journal') }}">{{ icon_journal(18) }}<span>Journal</span></a>
+        <a href="{{ url_for('main.supervision_list') }}">{{ icon_supervision(18) }}<span>Supervision</span></a>
+        <a href="{{ url_for('main.tools') }}">{{ icon_tools(18) }}<span>Outils</span></a>
+        <a href="{{ url_for('main.settings_page') }}">{{ icon_settings(18) }}<span>Paramètres</span></a>
+        <a class="btn btn-primary btn-sm" href="{{ url_for('main.platform_new') }}">{{ icon_plus(16) }}<span>Nouvelle plateforme</span></a>
         <form class="inline-form" method="post" action="{{ url_for('main.logout') }}">
-          <button type="submit" class="btn btn-sm">Déconnexion</button>
+          <button type="submit" class="btn btn-sm">{{ icon_logout(16) }}<span>Déconnexion</span></button>
         </form>
       </nav>
     </div>

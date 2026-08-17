@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_icons.html" import icon_platforms, icon_check, icon_tasks, icon_presales, icon_journal, icon_supervision, icon_tools, icon_settings %}
 {% block title %}Accueil — Plateforme Manager{% endblock %}
 {% block content %}
   <div class="home-hero">
@@ -8,90 +9,49 @@
 
   <div class="home-grid">
     <a class="home-tile" href="{{ url_for('main.platforms_list') }}">
-      <span class="icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 3 21 8 12 13 3 8 12 3Z"/>
-          <path d="M3 12 12 17 21 12"/>
-          <path d="M3 16 12 21 21 16"/>
-        </svg>
-      </span>
+      <span class="icon">{{ icon_platforms(26) }}</span>
       <h3>Plateformes</h3>
       <p>Environnements, sizing et journal par plateforme</p>
     </a>
 
     <a class="home-tile" href="{{ url_for('main.daily_check') }}">
-      <span class="icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 3 20 6 20 12C20 17 16.5 20 12 21 7.5 20 4 17 4 12L4 6Z"/>
-          <path d="M8.5 12 11 14.5 15.5 9.5"/>
-        </svg>
-      </span>
+      <span class="icon">{{ icon_check(26) }}</span>
       <h3>Check journalier</h3>
       <p>Suivi des alertes par environnement, vues jour/semaine/mois</p>
     </a>
 
     <a class="home-tile" href="{{ url_for('main.tasks_list') }}">
-      <span class="icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="4" y="3" width="16" height="18" rx="2"/>
-          <path d="M8 8 10 10 14 6"/>
-          <path d="M8 15 16 15"/>
-          <path d="M8 18 13 18"/>
-        </svg>
-      </span>
+      <span class="icon">{{ icon_tasks(26) }}</span>
       <h3>Tâches</h3>
       <p>Installations, maintenances, builds, ateliers techniques</p>
     </a>
 
     <a class="home-tile" href="{{ url_for('main.presales_list') }}">
-      <span class="icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M3 17 9 11 13 15 21 6"/>
-          <path d="M15 6 21 6 21 12"/>
-        </svg>
-      </span>
+      <span class="icon">{{ icon_presales(26) }}</span>
       <h3>Avant-ventes</h3>
       <p>Opportunités commerciales en cours</p>
     </a>
 
     <a class="home-tile" href="{{ url_for('main.journal') }}">
-      <span class="icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="9"/>
-          <path d="M12 7 12 12 16 14"/>
-        </svg>
-      </span>
+      <span class="icon">{{ icon_journal(26) }}</span>
       <h3>Journal</h3>
       <p>Historique des opérations, toutes plateformes</p>
     </a>
 
     <a class="home-tile" href="{{ url_for('main.supervision_list') }}">
-      <span class="icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M3 12 8 12 10 6 14 18 16 12 21 12"/>
-        </svg>
-      </span>
+      <span class="icon">{{ icon_supervision(26) }}</span>
       <h3>Supervision</h3>
       <p>Liens vers les outils de supervision externes</p>
     </a>
 
     <a class="home-tile" href="{{ url_for('main.tools') }}">
-      <span class="icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2-2 2.6-2.6Z"/>
-        </svg>
-      </span>
+      <span class="icon">{{ icon_tools(26) }}</span>
       <h3>Outils</h3>
       <p>Scripts de lancement et de mise à jour</p>
     </a>
 
     <a class="home-tile" href="{{ url_for('main.settings_page') }}">
-      <span class="icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="3"/>
-          <path d="M12 2 12 5 M12 19 12 22 M4.2 4.2 6.3 6.3 M17.7 17.7 19.8 19.8 M2 12 5 12 M19 12 22 12 M4.2 19.8 6.3 17.7 M17.7 6.3 19.8 4.2"/>
-        </svg>
-      </span>
+      <span class="icon">{{ icon_settings(26) }}</span>
       <h3>Paramètres</h3>
       <p>Code PIN d'accès</p>
     </a>
