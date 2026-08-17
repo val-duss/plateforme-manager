@@ -15,6 +15,24 @@ docker compose up --build
 
 L'application est ensuite disponible sur http://localhost:8000
 
+## Utilisation sur Windows
+
+Deux scripts sont fournis à la racine du dépôt pour éviter de passer par la
+ligne de commande :
+
+- **`demarrer-application.bat`** : démarre (et construit si besoin) les
+  conteneurs Docker, puis ouvre l'application dans le navigateur par défaut.
+  Double-cliquer dessus, ou créer un raccourci sur le bureau pointant vers ce
+  fichier pour un lancement en un clic.
+- **`mettre-a-jour-et-rebuild.bat`** : récupère les derniers changements de la
+  branche courante (`git pull`) puis reconstruit et redémarre les conteneurs
+  Docker.
+
+Prérequis : [Docker Desktop](https://www.docker.com/products/docker-desktop)
+et [Git](https://git-scm.com/download/win) installés et dans le `PATH`. La
+fenêtre de commande reste ouverte à la fin pour voir les éventuelles erreurs ;
+fermez-la ou appuyez sur une touche pour la fermer.
+
 ## Développement local (sans Docker)
 
 ```bash
