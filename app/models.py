@@ -394,6 +394,21 @@ class CheckStatus:
     }
 
 
+class AlertSeverity:
+    INFO = "INFO"
+    WARNING = "WARNING"
+    ERROR = "ERROR"
+    CRITICAL = "CRITICAL"
+    ALL = [INFO, WARNING, ERROR, CRITICAL]
+    LABELS = {
+        INFO: "Info",
+        WARNING: "Avertissement",
+        ERROR: "Erreur",
+        CRITICAL: "Critique",
+    }
+    RANK = {INFO: 0, WARNING: 1, ERROR: 2, CRITICAL: 3}
+
+
 class DailyCheck(db.Model):
     """Confirmation quotidienne « RAS » pour un environnement donné.
 
@@ -408,7 +423,6 @@ class DailyCheck(db.Model):
     environment_id = db.Column(db.Integer, db.ForeignKey("environments.id"), nullable=False)
     check_date = db.Column(db.Date, nullable=False)
     status = db.Column(db.String(20), nullable=False, default=CheckStatus.OK)
-    checked_by = db.Column(db.String(200), nullable=True)
     checked_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     notes = db.Column(db.Text, nullable=True)
 
@@ -422,8 +436,8 @@ class EnvironmentAlert(db.Model):
     environment_id = db.Column(db.Integer, db.ForeignKey("environments.id"), nullable=False)
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text, nullable=True)
+    severity = db.Column(db.String(20), nullable=False, default=AlertSeverity.WARNING)
     opened_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    opened_by = db.Column(db.String(200), nullable=True)
     closed_at = db.Column(db.DateTime, nullable=True)
     closed_by = db.Column(db.String(200), nullable=True)
     resolution_notes = db.Column(db.Text, nullable=True)
@@ -431,3 +445,14 @@ class EnvironmentAlert(db.Model):
     @property
     def is_open(self):
         return self.closed_at is None
+
+
+class SupervisionLink(db.Model):
+    """Lien vers un outil de supervision externe (nom + URL)."""
+
+    __tablename__ = "supervision_links"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    url = db.Column(db.String(500), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)

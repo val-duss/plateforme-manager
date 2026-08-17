@@ -7,6 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from werkzeug.security import generate_password_hash
 
 from .models import (
+    AlertSeverity,
     AppSettings,
     BillingPeriodicity,
     CheckStatus,
@@ -24,16 +25,22 @@ DEFAULT_PIN = "0000"
 
 def _upgrade_schema(engine):
     """Ajoute les colonnes manquantes sur une base SQLite existante (pas de framework de migration)."""
-    additions = {
-        "file_path": "VARCHAR(500)",
-        "sizing_before": "TEXT",
-        "sizing_after": "TEXT",
+    table_additions = {
+        "operations": {
+            "file_path": "VARCHAR(500)",
+            "sizing_before": "TEXT",
+            "sizing_after": "TEXT",
+        },
+        "environment_alerts": {
+            "severity": "VARCHAR(20) NOT NULL DEFAULT 'WARNING'",
+        },
     }
     with engine.connect() as conn:
-        existing = {row[1] for row in conn.execute(text("PRAGMA table_info(operations)"))}
-        for column, coltype in additions.items():
-            if column not in existing:
-                conn.execute(text(f"ALTER TABLE operations ADD COLUMN {column} {coltype}"))
+        for table, additions in table_additions.items():
+            existing = {row[1] for row in conn.execute(text(f"PRAGMA table_info({table})"))}
+            for column, coltype in additions.items():
+                if column not in existing:
+                    conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {coltype}"))
         conn.commit()
 
 
@@ -105,6 +112,7 @@ def create_app():
             "TaskStatus": TaskStatus,
             "BillingPeriodicity": BillingPeriodicity,
             "CheckStatus": CheckStatus,
+            "AlertSeverity": AlertSeverity,
         }
 
     return app

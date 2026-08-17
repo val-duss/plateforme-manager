@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Supervision — Plateforme Manager{% endblock %}
+{% block content %}
+  <div class="page-header">
+    <div>
+      <h1>Supervision</h1>
+      <p class="subtitle">Accès rapide aux outils de supervision externes.</p>
+    </div>
+    <a class="btn btn-primary" href="{{ url_for('main.supervision_new') }}">+ Ajouter un outil</a>
+  </div>
+
+  {% if links %}
+    <div class="supervision-grid">
+      {% for link in links %}
+        <div class="card supervision-tile">
+          <a class="supervision-tile-link" href="{{ link.url }}" target="_blank" rel="noopener">
+            <span class="icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 12 8 12 10 6 14 18 16 12 21 12"/>
+              </svg>
+            </span>
+            <h3>{{ link.name }}</h3>
+            <p>{{ link.url }}</p>
+          </a>
+          <div class="actions">
+            <a class="btn btn-sm" href="{{ url_for('main.supervision_edit', link_id=link.id) }}">Modifier</a>
+            <form class="inline-form" method="post" action="{{ url_for('main.supervision_delete', link_id=link.id) }}"
+                  onsubmit="return confirm('Supprimer ce lien de supervision ?');">
+              <button type="submit" class="btn btn-danger btn-sm">Supprimer</button>
+            </form>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="card empty-state">
+      <p>Aucun outil de supervision enregistré pour le moment.</p>
+      <a class="btn btn-primary" href="{{ url_for('main.supervision_new') }}">Ajouter le premier outil</a>
+    </div>
+  {% endif %}
+{% endblock %}

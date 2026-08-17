@@ -21,7 +21,9 @@
 
   <div class="tag-row small muted" style="margin: 10px 0 16px;">
     <span><span class="check-dot check-dot-OK"></span> RAS</span>
-    <span><span class="check-dot check-dot-ALERT"></span> Alerte</span>
+    {% for value in AlertSeverity.ALL %}
+      <span><span class="check-dot check-dot-{{ value }}"></span> {{ AlertSeverity.LABELS[value] }}</span>
+    {% endfor %}
     <span><span class="check-dot check-dot-none"></span> Non vérifié</span>
   </div>
 
@@ -50,7 +52,7 @@
               {% for day in days %}
                 {% set status = status_by_env.get(env.id, {}).get(day) %}
                 <td class="check-cell {{ 'check-cell-today' if day == today else '' }}"
-                    title="{{ day.strftime('%d/%m/%Y') }} — {{ CheckStatus.LABELS.get(status, 'Non vérifié') }}">
+                    title="{{ day.strftime('%d/%m/%Y') }} — {{ status_labels.get(status, 'Non vérifié') }}">
                   <span class="check-dot check-dot-{{ status or 'none' }}"></span>
                 </td>
               {% endfor %}

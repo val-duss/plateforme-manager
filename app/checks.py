@@ -2,7 +2,7 @@
 
 from datetime import date, timedelta
 
-from .models import CheckStatus, DailyCheck, EnvironmentAlert
+from .models import AlertSeverity, CheckStatus, DailyCheck, EnvironmentAlert
 
 MONTH_NAMES_FR = [
     "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
@@ -12,13 +12,17 @@ MONTH_NAMES_FR = [
 WEEKDAY_NAMES_FR = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"]
 WEEKDAY_NAMES_FR_LONG = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"]
 
+# Statuts possibles pour une case de la grille jour/environnement, avec leur libellé.
+STATUS_LABELS = {CheckStatus.OK: "RAS", **AlertSeverity.LABELS}
+
 
 def compute_environment_statuses(environments, start_date, end_date):
     """Retourne (days, status_by_env) pour la période [start_date, end_date] incluse.
 
-    status_by_env est un dict {environment_id: {date: CheckStatus.OK|CheckStatus.ALERT|None}}.
-    None signifie « non vérifié ». Une alerte ouverte pendant tout ou partie du
-    jour prévaut toujours sur une confirmation RAS ce même jour.
+    status_by_env est un dict {environment_id: {date: statut}} où statut vaut
+    CheckStatus.OK, l'une des valeurs de AlertSeverity (alerte ouverte ce jour-là,
+    la plus sévère si plusieurs), ou None (non vérifié). Une alerte ouverte
+    prévaut toujours sur une confirmation RAS ce même jour.
     """
     env_ids = [e.id for e in environments]
     day_count = (end_date - start_date).days + 1
@@ -50,12 +54,15 @@ def compute_environment_statuses(environments, start_date, end_date):
             if day > today:
                 day_statuses[day] = None
                 continue
-            has_alert = any(
-                alert.opened_at.date() <= day <= (alert.closed_at.date() if alert.closed_at else today)
+
+            day_alerts = [
+                alert
                 for alert in env_alerts
-            )
-            if has_alert:
-                day_statuses[day] = CheckStatus.ALERT
+                if alert.opened_at.date() <= day <= (alert.closed_at.date() if alert.closed_at else today)
+            ]
+            if day_alerts:
+                worst = max(day_alerts, key=lambda a: AlertSeverity.RANK.get(a.severity, 0))
+                day_statuses[day] = worst.severity
             elif day in env_ok_days:
                 day_statuses[day] = CheckStatus.OK
             else:

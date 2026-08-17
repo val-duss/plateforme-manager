@@ -6,8 +6,9 @@ from datetime import date, datetime, timedelta
 from flask import Blueprint, abort, flash, redirect, render_template, request, send_from_directory, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from .checks import MONTH_NAMES_FR, WEEKDAY_NAMES_FR, WEEKDAY_NAMES_FR_LONG, compute_environment_statuses
+from .checks import MONTH_NAMES_FR, STATUS_LABELS, WEEKDAY_NAMES_FR, WEEKDAY_NAMES_FR_LONG, compute_environment_statuses
 from .models import (
+    AlertSeverity,
     AppSettings,
     AwsSizing,
     BillingEntry,
@@ -27,6 +28,7 @@ from .models import (
     Procedure,
     ProcedureStep,
     ProcedureStepTest,
+    SupervisionLink,
     Task,
     TaskStatus,
     TaskType,
@@ -124,6 +126,12 @@ def parse_date(value):
         return datetime.strptime(value, "%Y-%m-%d").date()
     except (TypeError, ValueError):
         return None
+
+
+def normalize_url(url):
+    if url and not url.startswith(("http://", "https://")):
+        return f"https://{url}"
+    return url
 
 
 def record_sizing_operation(environment, before, after, performed_by=None, file_path=None):
@@ -1066,6 +1074,7 @@ def daily_check():
         next_date=check_date + timedelta(days=1),
         checks_today=checks_today,
         CheckStatus=CheckStatus,
+        AlertSeverity=AlertSeverity,
     )
 
 
@@ -1073,7 +1082,6 @@ def daily_check():
 def daily_check_ok(environment_id):
     environment = Environment.query.get_or_404(environment_id)
     check_date = parse_date(request.form.get("date")) or date.today()
-    checked_by = request.form.get("checked_by", "").strip()
 
     if environment.open_alerts:
         flash("Impossible de confirmer RAS : une alerte est encore ouverte sur cet environnement.", "error")
@@ -1082,7 +1090,6 @@ def daily_check_ok(environment_id):
     existing = DailyCheck.query.filter_by(environment_id=environment.id, check_date=check_date).first()
     if existing:
         existing.status = CheckStatus.OK
-        existing.checked_by = checked_by or None
         existing.checked_at = datetime.utcnow()
     else:
         db.session.add(
@@ -1090,7 +1097,6 @@ def daily_check_ok(environment_id):
                 environment_id=environment.id,
                 check_date=check_date,
                 status=CheckStatus.OK,
-                checked_by=checked_by or None,
             )
         )
     db.session.commit()
@@ -1103,11 +1109,11 @@ def daily_check_alert(environment_id):
     environment = Environment.query.get_or_404(environment_id)
     title = request.form.get("title", "").strip()
     description = request.form.get("description", "").strip()
-    opened_by = request.form.get("opened_by", "").strip()
+    severity = request.form.get("severity")
     check_date = parse_date(request.form.get("date")) or date.today()
 
-    if not title:
-        flash("Merci de renseigner un titre pour l'alerte.", "error")
+    if not title or severity not in AlertSeverity.ALL:
+        flash("Merci de renseigner un titre et un type d'alerte valide.", "error")
         return redirect(url_for("main.daily_check", date=check_date.isoformat()))
 
     db.session.add(
@@ -1115,7 +1121,7 @@ def daily_check_alert(environment_id):
             environment_id=environment.id,
             title=title,
             description=description or None,
-            opened_by=opened_by or None,
+            severity=severity,
         )
     )
     db.session.add(
@@ -1123,9 +1129,8 @@ def daily_check_alert(environment_id):
             platform_id=environment.platform_id,
             environment_id=environment.id,
             operation_type=OperationType.INCIDENT,
-            title=f"Alerte : {title}",
+            title=f"Alerte ({AlertSeverity.LABELS[severity]}) : {title}",
             description=description or None,
-            performed_by=opened_by or None,
         )
     )
     db.session.commit()
@@ -1180,7 +1185,7 @@ def daily_check_week():
         next_url=url_for("main.daily_check_week", start=(start + timedelta(days=7)).isoformat()),
         day_labels=WEEKDAY_NAMES_FR,
         today=date.today(),
-        CheckStatus=CheckStatus,
+        status_labels=STATUS_LABELS,
     )
 
 
@@ -1214,5 +1219,62 @@ def daily_check_month():
         next_url=url_for("main.daily_check_month", month=f"{next_month_start.year:04d}-{next_month_start.month:02d}"),
         day_labels=None,
         today=date.today(),
-        CheckStatus=CheckStatus,
+        status_labels=STATUS_LABELS,
     )
+
+
+# --- Supervision -----------------------------------------------------------
+
+
+@bp.route("/supervision")
+def supervision_list():
+    links = SupervisionLink.query.order_by(SupervisionLink.name).all()
+    return render_template("supervision_list.html", links=links)
+
+
+@bp.route("/supervision/new", methods=["GET", "POST"])
+def supervision_new():
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        url = request.form.get("url", "").strip()
+
+        if not name or not url:
+            flash("Merci de renseigner un nom et une URL.", "error")
+            return render_template("supervision_form.html", link=None, form_data=request.form)
+
+        db.session.add(SupervisionLink(name=name, url=normalize_url(url)))
+        db.session.commit()
+        flash("Outil de supervision ajouté.", "success")
+        return redirect(url_for("main.supervision_list"))
+
+    return render_template("supervision_form.html", link=None, form_data={})
+
+
+@bp.route("/supervision/<int:link_id>/edit", methods=["GET", "POST"])
+def supervision_edit(link_id):
+    link = SupervisionLink.query.get_or_404(link_id)
+
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        url = request.form.get("url", "").strip()
+
+        if not name or not url:
+            flash("Merci de renseigner un nom et une URL.", "error")
+            return redirect(url_for("main.supervision_edit", link_id=link.id))
+
+        link.name = name
+        link.url = normalize_url(url)
+        db.session.commit()
+        flash("Outil de supervision mis à jour.", "success")
+        return redirect(url_for("main.supervision_list"))
+
+    return render_template("supervision_form.html", link=link, form_data=None)
+
+
+@bp.route("/supervision/<int:link_id>/delete", methods=["POST"])
+def supervision_delete(link_id):
+    link = SupervisionLink.query.get_or_404(link_id)
+    db.session.delete(link)
+    db.session.commit()
+    flash("Outil de supervision supprimé.", "success")
+    return redirect(url_for("main.supervision_list"))

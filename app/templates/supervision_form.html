@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}{{ "Modifier" if link else "Nouvel" }} outil de supervision — Plateforme Manager{% endblock %}
+{% block content %}
+  <div class="breadcrumb"><a href="{{ url_for('main.supervision_list') }}">← Supervision</a></div>
+
+  <h1>{{ "Modifier l'outil" if link else "Nouvel outil de supervision" }}</h1>
+
+  {% set data = form_data if form_data is not none else link %}
+  <form class="card" method="post">
+    <div class="form-grid">
+      <div class="field">
+        <label for="name">Nom *</label>
+        <input type="text" id="name" name="name" required placeholder="Ex : Grafana" value="{{ data.name if data else '' }}">
+      </div>
+      <div class="field">
+        <label for="url">URL *</label>
+        <input type="text" id="url" name="url" required placeholder="https://grafana.exemple.com" value="{{ data.url if data else '' }}">
+      </div>
+      <div class="actions">
+        <button class="btn btn-primary" type="submit">Enregistrer</button>
+        <a class="btn" href="{{ url_for('main.supervision_list') }}">Annuler</a>
+      </div>
+    </div>
+  </form>
+{% endblock %}

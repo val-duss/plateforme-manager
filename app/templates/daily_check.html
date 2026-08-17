@@ -43,30 +43,24 @@
             <span class="badge badge-{{ env.infra_kind }}">{{ InfraKind.LABELS[env.infra_kind] }}</span>
           </div>
           {% if not env.open_alerts and check %}
-            <span class="badge badge-task-status-TERMINEE">RAS confirmé à {{ check.checked_at.strftime('%H:%M') }}{% if check.checked_by %} par {{ check.checked_by }}{% endif %}</span>
+            <span class="badge badge-task-status-TERMINEE">RAS confirmé à {{ check.checked_at.strftime('%H:%M') }}</span>
           {% endif %}
         </div>
 
         {% if env.open_alerts %}
           {% for alert in env.open_alerts %}
             <div class="card" style="background:var(--badge-prod-bg); border-color:transparent; margin-bottom:10px;">
-              <strong>{{ alert.title }}</strong>
-              <p class="small muted">
-                Ouverte le {{ alert.opened_at.strftime('%d/%m/%Y %H:%M') }}
-                {% if alert.opened_by %} par {{ alert.opened_by }}{% endif %}
-              </p>
+              <div class="tag-row">
+                <span class="badge badge-severity-{{ alert.severity }}">{{ AlertSeverity.LABELS[alert.severity] }}</span>
+                <strong>{{ alert.title }}</strong>
+              </div>
+              <p class="small muted">Ouverte le {{ alert.opened_at.strftime('%d/%m/%Y %H:%M') }}</p>
               {% if alert.description %}<p class="small">{{ alert.description }}</p>{% endif %}
               <form method="post" action="{{ url_for('main.alert_close', alert_id=alert.id) }}">
                 <input type="hidden" name="next" value="{{ url_for('main.daily_check', date=check_date.isoformat()) }}">
-                <div class="form-row">
-                  <div class="field">
-                    <label>Clôturé par</label>
-                    <input type="text" name="closed_by">
-                  </div>
-                  <div class="field">
-                    <label>Résolution</label>
-                    <input type="text" name="resolution_notes" placeholder="Cause / correctif appliqué">
-                  </div>
+                <div class="field">
+                  <label>Résolution</label>
+                  <input type="text" name="resolution_notes" placeholder="Cause / correctif appliqué">
                 </div>
                 <div class="actions">
                   <button type="submit" class="btn btn-primary btn-sm">Clôturer l'alerte</button>
@@ -76,9 +70,8 @@
           {% endfor %}
         {% elif check_date <= today %}
           <div class="actions">
-            <form method="post" action="{{ url_for('main.daily_check_ok', environment_id=env.id) }}" class="inline-add-row">
+            <form method="post" action="{{ url_for('main.daily_check_ok', environment_id=env.id) }}">
               <input type="hidden" name="date" value="{{ check_date.isoformat() }}">
-              <input type="text" name="checked_by" placeholder="Réalisé par (optionnel)">
               <button type="submit" class="btn btn-primary btn-sm">RAS</button>
             </form>
           </div>
@@ -95,7 +88,11 @@
                 <input type="text" name="description" placeholder="Description (optionnel)">
               </div>
               <div class="field">
-                <input type="text" name="opened_by" placeholder="Signalé par (optionnel)">
+                <select name="severity">
+                  {% for value in AlertSeverity.ALL %}
+                    <option value="{{ value }}" {{ "selected" if value == AlertSeverity.WARNING else "" }}>{{ AlertSeverity.LABELS[value] }}</option>
+                  {% endfor %}
+                </select>
               </div>
             </div>
             <div class="actions">
