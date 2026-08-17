@@ -170,6 +170,58 @@
     </div>
 
     <div class="section">
+      <h2>Ressources utilisées</h2>
+      <p class="hint">Le provisionné est repris automatiquement du sizing ci-dessus.</p>
+      {% set usage = environment.resource_usage %}
+      <form class="card" method="post" action="{{ url_for('main.resource_usage_update', environment_id=environment.id) }}">
+        <div class="form-grid">
+          <div class="field">
+            <label for="storage_used_gb">Stockage utilisé (Go)</label>
+            <input type="number" id="storage_used_gb" name="storage_used_gb" min="0" step="0.1"
+                   value="{{ usage.storage_used_gb if usage and usage.storage_used_gb is not none else '' }}">
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label for="cpu_min_15min">CPU min (15 min, vCPU)</label>
+              <input type="number" id="cpu_min_15min" name="cpu_min_15min" min="0" step="0.1"
+                     value="{{ usage.cpu_min_15min if usage and usage.cpu_min_15min is not none else '' }}">
+            </div>
+            <div class="field">
+              <label for="cpu_max_15min">CPU max (15 min, vCPU)</label>
+              <input type="number" id="cpu_max_15min" name="cpu_max_15min" min="0" step="0.1"
+                     value="{{ usage.cpu_max_15min if usage and usage.cpu_max_15min is not none else '' }}">
+            </div>
+            <div class="field">
+              <label for="cpu_avg">CPU moyen (vCPU)</label>
+              <input type="number" id="cpu_avg" name="cpu_avg" min="0" step="0.1"
+                     value="{{ usage.cpu_avg if usage and usage.cpu_avg is not none else '' }}">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label for="ram_min_15min">RAM min (15 min, Go)</label>
+              <input type="number" id="ram_min_15min" name="ram_min_15min" min="0" step="0.1"
+                     value="{{ usage.ram_min_15min if usage and usage.ram_min_15min is not none else '' }}">
+            </div>
+            <div class="field">
+              <label for="ram_max_15min">RAM max (15 min, Go)</label>
+              <input type="number" id="ram_max_15min" name="ram_max_15min" min="0" step="0.1"
+                     value="{{ usage.ram_max_15min if usage and usage.ram_max_15min is not none else '' }}">
+            </div>
+            <div class="field">
+              <label for="ram_avg">RAM moyenne (Go)</label>
+              <input type="number" id="ram_avg" name="ram_avg" min="0" step="0.1"
+                     value="{{ usage.ram_avg if usage and usage.ram_avg is not none else '' }}">
+            </div>
+          </div>
+          <div class="actions">
+            <button class="btn btn-primary" type="submit">Enregistrer</button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <div class="section">
       <h2>Historique des changements de sizing</h2>
       {% set resizing_ops = environment.operations | selectattr("operation_type", "equalto", OperationType.RESIZING) | list %}
       {% if resizing_ops %}

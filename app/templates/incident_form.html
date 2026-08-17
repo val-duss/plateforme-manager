@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}{{ "Modifier" if incident else "Nouvel" }} incident — {{ platform.name }}{% endblock %}
+{% block content %}
+  <div class="breadcrumb"><a href="{{ url_for('main.platform_detail', platform_id=platform.id) }}">← {{ platform.name }}</a></div>
+
+  <h1>{{ "Modifier l'incident" if incident else "Nouvel incident" }}</h1>
+
+  {% set data = form_data if form_data is not none else incident %}
+  {% set duration_h, duration_m = (data.duration_minutes // 60, data.duration_minutes % 60) if incident and form_data is none else (None, None) %}
+  {% set downtime_h, downtime_m = (data.downtime_minutes // 60, data.downtime_minutes % 60) if incident and form_data is none else (None, None) %}
+  <form class="card" method="post">
+    <div class="form-grid">
+      <div class="field">
+        <label for="date">Date *</label>
+        <input type="date" id="date" name="date" required value="{{ data.date if data else '' }}">
+      </div>
+
+      <div class="field">
+        <label>Durée de l'incident *</label>
+        <div class="form-row">
+          <input type="number" name="duration_hours" min="0" placeholder="Heures"
+                 value="{{ form_data.duration_hours if form_data else (duration_h if duration_h is not none else '') }}">
+          <input type="number" name="duration_minutes" min="0" max="59" placeholder="Minutes"
+                 value="{{ form_data.duration_minutes if form_data else (duration_m if duration_m is not none else '') }}">
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Temps d'interruption de service *</label>
+        <div class="form-row">
+          <input type="number" name="downtime_hours" min="0" placeholder="Heures"
+                 value="{{ form_data.downtime_hours if form_data else (downtime_h if downtime_h is not none else '') }}">
+          <input type="number" name="downtime_minutes" min="0" max="59" placeholder="Minutes"
+                 value="{{ form_data.downtime_minutes if form_data else (downtime_m if downtime_m is not none else '') }}">
+        </div>
+        <p class="hint">Durée pendant laquelle le service était réellement indisponible (peut être inférieure à la durée totale de l'incident).</p>
+      </div>
+
+      <div class="field">
+        <label for="reference">Référence de fiche d'intervention</label>
+        <input type="text" id="reference" name="reference" placeholder="Ex : INC-2026-014" value="{{ data.reference if data else '' }}">
+      </div>
+
+      <div class="field">
+        <label for="notes">Note</label>
+        <textarea id="notes" name="notes">{{ data.notes if data else '' }}</textarea>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-primary" type="submit">Enregistrer</button>
+        <a class="btn" href="{{ url_for('main.platform_detail', platform_id=platform.id) }}">Annuler</a>
+      </div>
+    </div>
+  </form>
+{% endblock %}

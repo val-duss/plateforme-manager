@@ -8,6 +8,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 from .checks import MONTH_NAMES_FR, STATUS_LABELS, WEEKDAY_NAMES_FR, WEEKDAY_NAMES_FR_LONG, compute_environment_statuses
 from .models import (
+    ActionPlan,
     AlertSeverity,
     AppSettings,
     AwsSizing,
@@ -18,6 +19,7 @@ from .models import (
     Environment,
     EnvironmentAlert,
     EnvType,
+    Incident,
     InfraKind,
     K8sSizing,
     Operation,
@@ -28,6 +30,7 @@ from .models import (
     Procedure,
     ProcedureStep,
     ProcedureStepTest,
+    ResourceUsage,
     SupervisionLink,
     Task,
     TaskStatus,
@@ -134,6 +137,33 @@ def normalize_url(url):
     return url
 
 
+def parse_hours_minutes(hours_value, minutes_value):
+    hours = parse_int(hours_value) or 0
+    minutes = parse_int(minutes_value) or 0
+    return max(hours, 0) * 60 + max(minutes, 0)
+
+
+def format_duration(total_minutes):
+    if total_minutes is None:
+        return "—"
+    total_minutes = int(total_minutes)
+    hours, minutes = divmod(total_minutes, 60)
+    if hours and minutes:
+        return f"{hours} h {minutes} min"
+    if hours:
+        return f"{hours} h"
+    return f"{minutes} min"
+
+
+def platform_downtime_minutes(platform_id, start_date, end_date):
+    total = (
+        db.session.query(db.func.coalesce(db.func.sum(Incident.downtime_minutes), 0))
+        .filter(Incident.platform_id == platform_id, Incident.date >= start_date, Incident.date <= end_date)
+        .scalar()
+    )
+    return total or 0
+
+
 def record_sizing_operation(environment, before, after, performed_by=None, file_path=None):
     """Si le sizing a changé, journalise le changement comme une opération RESIZING."""
     changes = diff_snapshots(before, after)
@@ -196,12 +226,19 @@ def platform_new():
 @bp.route("/platforms/<int:platform_id>")
 def platform_detail(platform_id):
     platform = Platform.query.get_or_404(platform_id)
+
+    today = date.today()
+    month_start = today.replace(day=1)
+    year_start = today.replace(month=1, day=1)
+
     return render_template(
         "platform_detail.html",
         platform=platform,
         env_types=EnvType,
         infra_kinds=InfraKind,
         operation_types=OperationType,
+        downtime_month=platform_downtime_minutes(platform.id, month_start, today),
+        downtime_year=platform_downtime_minutes(platform.id, year_start, today),
     )
 
 
@@ -1278,3 +1315,193 @@ def supervision_delete(link_id):
     db.session.commit()
     flash("Outil de supervision supprimé.", "success")
     return redirect(url_for("main.supervision_list"))
+
+
+# --- Ressources utilisées (par environnement) -------------------------------
+
+
+@bp.route("/environments/<int:environment_id>/ressources", methods=["POST"])
+def resource_usage_update(environment_id):
+    environment = Environment.query.get_or_404(environment_id)
+
+    storage_used_gb = parse_float(request.form.get("storage_used_gb"))
+    cpu_min_15min = parse_float(request.form.get("cpu_min_15min"))
+    cpu_max_15min = parse_float(request.form.get("cpu_max_15min"))
+    cpu_avg = parse_float(request.form.get("cpu_avg"))
+    ram_min_15min = parse_float(request.form.get("ram_min_15min"))
+    ram_max_15min = parse_float(request.form.get("ram_max_15min"))
+    ram_avg = parse_float(request.form.get("ram_avg"))
+
+    if not environment.resource_usage:
+        environment.resource_usage = ResourceUsage(environment_id=environment.id)
+        db.session.add(environment.resource_usage)
+
+    usage = environment.resource_usage
+    usage.storage_used_gb = storage_used_gb
+    usage.cpu_min_15min = cpu_min_15min
+    usage.cpu_max_15min = cpu_max_15min
+    usage.cpu_avg = cpu_avg
+    usage.ram_min_15min = ram_min_15min
+    usage.ram_max_15min = ram_max_15min
+    usage.ram_avg = ram_avg
+    usage.updated_at = datetime.utcnow()
+    db.session.commit()
+    flash("Utilisation des ressources mise à jour.", "success")
+    return redirect(url_for("main.environment_edit", environment_id=environment.id))
+
+
+# --- Incidents (par plateforme) ---------------------------------------------
+
+
+@bp.route("/platforms/<int:platform_id>/incidents/new", methods=["GET", "POST"])
+def incident_new(platform_id):
+    platform = Platform.query.get_or_404(platform_id)
+
+    if request.method == "POST":
+        incident_date = parse_date(request.form.get("date"))
+        duration_minutes = parse_hours_minutes(request.form.get("duration_hours"), request.form.get("duration_minutes"))
+        downtime_minutes = parse_hours_minutes(request.form.get("downtime_hours"), request.form.get("downtime_minutes"))
+        reference = request.form.get("reference", "").strip()
+        notes = request.form.get("notes", "").strip()
+
+        if not incident_date:
+            flash("Merci de renseigner une date valide.", "error")
+            return render_template("incident_form.html", platform=platform, incident=None, form_data=request.form)
+        if downtime_minutes > duration_minutes:
+            flash("Le temps d'interruption de service ne peut pas dépasser la durée de l'incident.", "error")
+            return render_template("incident_form.html", platform=platform, incident=None, form_data=request.form)
+
+        platform.incidents.append(
+            Incident(
+                date=incident_date,
+                duration_minutes=duration_minutes,
+                downtime_minutes=downtime_minutes,
+                reference=reference or None,
+                notes=notes or None,
+            )
+        )
+        db.session.commit()
+        flash("Incident enregistré.", "success")
+        return redirect(url_for("main.platform_detail", platform_id=platform.id))
+
+    return render_template("incident_form.html", platform=platform, incident=None, form_data={})
+
+
+@bp.route("/incidents/<int:incident_id>/edit", methods=["GET", "POST"])
+def incident_edit(incident_id):
+    incident = Incident.query.get_or_404(incident_id)
+    platform = incident.platform
+
+    if request.method == "POST":
+        incident_date = parse_date(request.form.get("date"))
+        duration_minutes = parse_hours_minutes(request.form.get("duration_hours"), request.form.get("duration_minutes"))
+        downtime_minutes = parse_hours_minutes(request.form.get("downtime_hours"), request.form.get("downtime_minutes"))
+        reference = request.form.get("reference", "").strip()
+        notes = request.form.get("notes", "").strip()
+
+        if not incident_date:
+            flash("Merci de renseigner une date valide.", "error")
+            return redirect(url_for("main.incident_edit", incident_id=incident.id))
+        if downtime_minutes > duration_minutes:
+            flash("Le temps d'interruption de service ne peut pas dépasser la durée de l'incident.", "error")
+            return redirect(url_for("main.incident_edit", incident_id=incident.id))
+
+        incident.date = incident_date
+        incident.duration_minutes = duration_minutes
+        incident.downtime_minutes = downtime_minutes
+        incident.reference = reference or None
+        incident.notes = notes or None
+        db.session.commit()
+        flash("Incident mis à jour.", "success")
+        return redirect(url_for("main.platform_detail", platform_id=platform.id))
+
+    return render_template("incident_form.html", platform=platform, incident=incident, form_data=None)
+
+
+@bp.route("/incidents/<int:incident_id>/delete", methods=["POST"])
+def incident_delete(incident_id):
+    incident = Incident.query.get_or_404(incident_id)
+    platform_id = incident.platform_id
+    db.session.delete(incident)
+    db.session.commit()
+    flash("Incident supprimé.", "success")
+    return redirect(url_for("main.platform_detail", platform_id=platform_id))
+
+
+# --- Plans d'action (liés à des incidents) ----------------------------------
+
+
+@bp.route("/platforms/<int:platform_id>/plans-action/new", methods=["GET", "POST"])
+def action_plan_new(platform_id):
+    platform = Platform.query.get_or_404(platform_id)
+
+    if request.method == "POST":
+        title = request.form.get("title", "").strip()
+        description = request.form.get("description", "").strip()
+        status = request.form.get("status")
+        due_date = parse_date(request.form.get("due_date"))
+        incident_ids = [int(i) for i in request.form.getlist("incident_ids")]
+
+        if not title or status not in TaskStatus.ALL:
+            flash("Merci de renseigner un titre et un statut valide.", "error")
+            return render_template("action_plan_form.html", platform=platform, plan=None, form_data=request.form)
+
+        plan = ActionPlan(
+            platform_id=platform.id,
+            title=title,
+            description=description or None,
+            status=status,
+            due_date=due_date,
+        )
+        if incident_ids:
+            plan.incidents = Incident.query.filter(
+                Incident.id.in_(incident_ids), Incident.platform_id == platform.id
+            ).all()
+        db.session.add(plan)
+        db.session.commit()
+        flash("Plan d'action créé.", "success")
+        return redirect(url_for("main.platform_detail", platform_id=platform.id))
+
+    return render_template("action_plan_form.html", platform=platform, plan=None, form_data={})
+
+
+@bp.route("/plans-action/<int:plan_id>/edit", methods=["GET", "POST"])
+def action_plan_edit(plan_id):
+    plan = ActionPlan.query.get_or_404(plan_id)
+    platform = plan.platform
+
+    if request.method == "POST":
+        title = request.form.get("title", "").strip()
+        description = request.form.get("description", "").strip()
+        status = request.form.get("status")
+        due_date = parse_date(request.form.get("due_date"))
+        incident_ids = [int(i) for i in request.form.getlist("incident_ids")]
+
+        if not title or status not in TaskStatus.ALL:
+            flash("Merci de renseigner un titre et un statut valide.", "error")
+            return redirect(url_for("main.action_plan_edit", plan_id=plan.id))
+
+        plan.title = title
+        plan.description = description or None
+        plan.status = status
+        plan.due_date = due_date
+        plan.incidents = (
+            Incident.query.filter(Incident.id.in_(incident_ids), Incident.platform_id == platform.id).all()
+            if incident_ids
+            else []
+        )
+        db.session.commit()
+        flash("Plan d'action mis à jour.", "success")
+        return redirect(url_for("main.platform_detail", platform_id=platform.id))
+
+    return render_template("action_plan_form.html", platform=platform, plan=plan, form_data=None)
+
+
+@bp.route("/plans-action/<int:plan_id>/delete", methods=["POST"])
+def action_plan_delete(plan_id):
+    plan = ActionPlan.query.get_or_404(plan_id)
+    platform_id = plan.platform_id
+    db.session.delete(plan)
+    db.session.commit()
+    flash("Plan d'action supprimé.", "success")
+    return redirect(url_for("main.platform_detail", platform_id=platform_id))

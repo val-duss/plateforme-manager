@@ -76,11 +76,143 @@
           {% endif %}
 
           {% if env.notes %}<p class="small muted">{{ env.notes }}</p>{% endif %}
+
+          {% set usage = env.resource_usage %}
+          {% if usage %}
+            <div style="overflow-x:auto; margin-top:12px;">
+              <table>
+                <thead><tr><th></th><th>Utilisé</th><th>Provisionné</th></tr></thead>
+                <tbody>
+                  <tr>
+                    <td>Stockage</td>
+                    <td>{{ (usage.storage_used_gb ~ " Go") if usage.storage_used_gb is not none else "—" }}</td>
+                    <td>{{ (sizing.storage | round(1) ~ " Go") if sizing else "—" }}</td>
+                  </tr>
+                </tbody>
+              </table>
+              <table style="margin-top:8px;">
+                <thead><tr><th></th><th>Min (15 min)</th><th>Max (15 min)</th><th>Moyenne</th><th>Provisionné</th></tr></thead>
+                <tbody>
+                  <tr>
+                    <td>CPU</td>
+                    <td>{{ usage.cpu_min_15min if usage.cpu_min_15min is not none else "—" }}</td>
+                    <td>{{ usage.cpu_max_15min if usage.cpu_max_15min is not none else "—" }}</td>
+                    <td>{{ usage.cpu_avg if usage.cpu_avg is not none else "—" }}</td>
+                    <td>{{ (sizing.cpu | round(1)) if sizing else "—" }}</td>
+                  </tr>
+                  <tr>
+                    <td>RAM</td>
+                    <td>{{ (usage.ram_min_15min ~ " Go") if usage.ram_min_15min is not none else "—" }}</td>
+                    <td>{{ (usage.ram_max_15min ~ " Go") if usage.ram_max_15min is not none else "—" }}</td>
+                    <td>{{ (usage.ram_avg ~ " Go") if usage.ram_avg is not none else "—" }}</td>
+                    <td>{{ (sizing.ram | round(1) ~ " Go") if sizing else "—" }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          {% endif %}
         </div>
       {% endfor %}
     {% else %}
       <div class="card empty-state">
         <p>Aucun environnement pour cette plateforme.</p>
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <h2>Incidents</h2>
+      <a class="btn btn-primary btn-sm" href="{{ url_for('main.incident_new', platform_id=platform.id) }}">+ Nouvel incident</a>
+    </div>
+
+    <div class="sizing-grid" style="margin-bottom:14px;">
+      <div class="sizing-metric">
+        <div class="value">{{ downtime_month | duration }}</div>
+        <div class="label">Indisponibilité — ce mois-ci</div>
+      </div>
+      <div class="sizing-metric">
+        <div class="value">{{ downtime_year | duration }}</div>
+        <div class="label">Indisponibilité — cette année</div>
+      </div>
+    </div>
+
+    {% if platform.incidents %}
+      <div class="card" style="padding:0; overflow-x:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Durée</th>
+              <th>Interruption de service</th>
+              <th>Référence</th>
+              <th>Note</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for incident in platform.incidents %}
+              <tr>
+                <td><a href="{{ url_for('main.incident_edit', incident_id=incident.id) }}">{{ incident.date.strftime('%d/%m/%Y') }}</a></td>
+                <td>{{ incident.duration_minutes | duration }}</td>
+                <td>{{ incident.downtime_minutes | duration }}</td>
+                <td>{{ incident.reference or "—" }}</td>
+                <td>{{ incident.notes or "—" }}</td>
+                <td>
+                  <form class="inline-form" method="post" action="{{ url_for('main.incident_delete', incident_id=incident.id) }}"
+                        onsubmit="return confirm('Supprimer cet incident ?');">
+                    <button type="submit" class="btn btn-danger btn-sm">Suppr.</button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="card empty-state">
+        <p>Aucun incident enregistré pour cette plateforme.</p>
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <h2>Plans d'action</h2>
+      <a class="btn btn-primary btn-sm" href="{{ url_for('main.action_plan_new', platform_id=platform.id) }}">+ Nouveau plan d'action</a>
+    </div>
+
+    {% if platform.action_plans %}
+      <div class="card-list">
+        {% for plan in platform.action_plans %}
+          <div class="card">
+            <div class="env-block-head">
+              <div class="tag-row">
+                <span class="badge badge-task-status-{{ plan.status }}">{{ TaskStatus.LABELS[plan.status] }}</span>
+                <strong>{{ plan.title }}</strong>
+              </div>
+              <div class="actions">
+                <a class="btn btn-sm" href="{{ url_for('main.action_plan_edit', plan_id=plan.id) }}">Modifier</a>
+                <form class="inline-form" method="post" action="{{ url_for('main.action_plan_delete', plan_id=plan.id) }}"
+                      onsubmit="return confirm('Supprimer ce plan d\'action ?');">
+                  <button type="submit" class="btn btn-danger btn-sm">Suppr.</button>
+                </form>
+              </div>
+            </div>
+            {% if plan.description %}<p class="small">{{ plan.description }}</p>{% endif %}
+            {% if plan.due_date %}<p class="small muted">Échéance : {{ plan.due_date.strftime('%d/%m/%Y') }}</p>{% endif %}
+            {% if plan.incidents %}
+              <p class="small muted">
+                Incidents liés :
+                {% for incident in plan.incidents %}{{ incident.date.strftime('%d/%m/%Y') }}{% if incident.reference %} ({{ incident.reference }}){% endif %}{% if not loop.last %}, {% endif %}{% endfor %}
+              </p>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="card empty-state">
+        <p>Aucun plan d'action pour cette plateforme.</p>
       </div>
     {% endif %}
   </div>

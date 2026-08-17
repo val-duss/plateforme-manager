@@ -85,6 +85,18 @@ class Platform(db.Model):
         cascade="all, delete-orphan",
         order_by="Task.created_at.desc()",
     )
+    incidents = db.relationship(
+        "Incident",
+        backref="platform",
+        cascade="all, delete-orphan",
+        order_by="Incident.date.desc()",
+    )
+    action_plans = db.relationship(
+        "ActionPlan",
+        backref="platform",
+        cascade="all, delete-orphan",
+        order_by="ActionPlan.created_at.desc()",
+    )
 
 
 class Environment(db.Model):
@@ -123,6 +135,9 @@ class Environment(db.Model):
         backref="environment",
         cascade="all, delete-orphan",
         order_by="EnvironmentAlert.opened_at.desc()",
+    )
+    resource_usage = db.relationship(
+        "ResourceUsage", backref="environment", uselist=False, cascade="all, delete-orphan"
     )
 
     @property
@@ -456,3 +471,71 @@ class SupervisionLink(db.Model):
     name = db.Column(db.String(200), nullable=False)
     url = db.Column(db.String(500), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+
+class ResourceUsage(db.Model):
+    """Ressources effectivement utilisées sur un environnement (un instantané, mis à jour à la volée).
+
+    Le provisionné n'est pas dupliqué ici : il est déjà disponible via
+    Environment.sizing_summary (VM/K8s/AWS).
+    """
+
+    __tablename__ = "resource_usages"
+
+    id = db.Column(db.Integer, primary_key=True)
+    environment_id = db.Column(db.Integer, db.ForeignKey("environments.id"), unique=True, nullable=False)
+    storage_used_gb = db.Column(db.Float, nullable=True)
+    cpu_min_15min = db.Column(db.Float, nullable=True)
+    cpu_max_15min = db.Column(db.Float, nullable=True)
+    cpu_avg = db.Column(db.Float, nullable=True)
+    ram_min_15min = db.Column(db.Float, nullable=True)
+    ram_max_15min = db.Column(db.Float, nullable=True)
+    ram_avg = db.Column(db.Float, nullable=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+
+class Incident(db.Model):
+    """Incident déclaré sur une plateforme : date, durée totale et temps d'interruption de service."""
+
+    __tablename__ = "incidents"
+
+    id = db.Column(db.Integer, primary_key=True)
+    platform_id = db.Column(db.Integer, db.ForeignKey("platforms.id"), nullable=False)
+    date = db.Column(db.Date, nullable=False)
+    duration_minutes = db.Column(db.Integer, nullable=False, default=0)
+    downtime_minutes = db.Column(db.Integer, nullable=False, default=0)
+    reference = db.Column(db.String(200), nullable=True)
+    notes = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    action_plans = db.relationship(
+        "ActionPlan", secondary="action_plan_incidents", back_populates="incidents"
+    )
+
+
+action_plan_incidents = db.Table(
+    "action_plan_incidents",
+    db.Column("action_plan_id", db.Integer, db.ForeignKey("action_plans.id"), primary_key=True),
+    db.Column("incident_id", db.Integer, db.ForeignKey("incidents.id"), primary_key=True),
+)
+
+
+class ActionPlan(db.Model):
+    """Plan d'action lié à un ou plusieurs incidents."""
+
+    __tablename__ = "action_plans"
+
+    id = db.Column(db.Integer, primary_key=True)
+    platform_id = db.Column(db.Integer, db.ForeignKey("platforms.id"), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    status = db.Column(db.String(20), nullable=False, default=TaskStatus.A_FAIRE)
+    due_date = db.Column(db.Date, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    incidents = db.relationship(
+        "Incident",
+        secondary=action_plan_incidents,
+        back_populates="action_plans",
+        order_by="Incident.date.desc()",
+    )

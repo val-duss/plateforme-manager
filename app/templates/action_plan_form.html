@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}{{ "Modifier" if plan else "Nouveau" }} plan d'action — {{ platform.name }}{% endblock %}
+{% block content %}
+  <div class="breadcrumb"><a href="{{ url_for('main.platform_detail', platform_id=platform.id) }}">← {{ platform.name }}</a></div>
+
+  <h1>{{ "Modifier le plan d'action" if plan else "Nouveau plan d'action" }}</h1>
+
+  {% set data = form_data if form_data is not none else plan %}
+  {% set linked_ids = (form_data.getlist('incident_ids') | map('int') | list) if form_data else (plan.incidents | map(attribute='id') | list if plan else []) %}
+  <form class="card" method="post">
+    <div class="form-grid">
+      <div class="field">
+        <label for="title">Titre *</label>
+        <input type="text" id="title" name="title" required value="{{ data.title if data else '' }}">
+      </div>
+
+      <div class="form-row">
+        <div class="field">
+          <label for="status">Statut *</label>
+          <select id="status" name="status" required>
+            {% for value in TaskStatus.ALL %}
+              <option value="{{ value }}" {{ "selected" if (data and data.status == value) or (not data and value == TaskStatus.A_FAIRE) else "" }}>{{ TaskStatus.LABELS[value] }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="due_date">Échéance</label>
+          <input type="date" id="due_date" name="due_date" value="{{ (data.due_date if data else '') or '' }}">
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="description">Description</label>
+        <textarea id="description" name="description">{{ data.description if data else '' }}</textarea>
+      </div>
+
+      <div class="field">
+        <label>Incidents liés</label>
+        {% if platform.incidents %}
+          <div class="card" style="padding:12px;">
+            {% for incident in platform.incidents %}
+              <label style="display:flex; align-items:center; gap:8px; font-weight:normal; margin-bottom:6px;">
+                <input type="checkbox" name="incident_ids" value="{{ incident.id }}" style="width:auto;"
+                       {{ "checked" if incident.id in linked_ids else "" }}>
+                {{ incident.date.strftime('%d/%m/%Y') }}{% if incident.reference %} — {{ incident.reference }}{% endif %}
+              </label>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="small muted">Aucun incident enregistré pour cette plateforme pour le moment.</p>
+        {% endif %}
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-primary" type="submit">Enregistrer</button>
+        <a class="btn" href="{{ url_for('main.platform_detail', platform_id=platform.id) }}">Annuler</a>
+      </div>
+    </div>
+  </form>
+{% endblock %}

@@ -95,6 +95,7 @@ def create_app():
     from . import routes
 
     app.register_blueprint(routes.bp)
+    app.jinja_env.filters["duration"] = routes.format_duration
 
     with app.app_context():
         db.create_all()
