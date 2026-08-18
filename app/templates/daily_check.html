@@ -56,7 +56,22 @@
               </div>
               <p class="small muted">Ouverte le {{ alert.opened_at.strftime('%d/%m/%Y %H:%M') }}</p>
               {% if alert.description %}<p class="small">{{ alert.description }}</p>{% endif %}
-              <form method="post" action="{{ url_for('main.alert_close', alert_id=alert.id) }}">
+
+              {% if alert.notes %}
+                <div class="small" style="margin-bottom:8px;">
+                  {% for note in alert.notes %}
+                    <p style="margin:4px 0;"><span class="muted">{{ note.created_at.strftime('%d/%m/%Y %H:%M') }} —</span> {{ note.text }}</p>
+                  {% endfor %}
+                </div>
+              {% endif %}
+
+              <form method="post" action="{{ url_for('main.alert_note_add', alert_id=alert.id) }}" class="inline-add-row">
+                <input type="hidden" name="next" value="{{ url_for('main.daily_check', date=check_date.isoformat()) }}">
+                <input type="text" name="text" placeholder="Ajouter une note...">
+                <button type="submit" class="btn btn-sm">Ajouter</button>
+              </form>
+
+              <form method="post" action="{{ url_for('main.alert_close', alert_id=alert.id) }}" style="margin-top:10px;">
                 <input type="hidden" name="next" value="{{ url_for('main.daily_check', date=check_date.isoformat()) }}">
                 <div class="field">
                   <label>Résolution</label>

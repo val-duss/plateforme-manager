@@ -9,6 +9,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from .checks import MONTH_NAMES_FR, STATUS_LABELS, WEEKDAY_NAMES_FR, WEEKDAY_NAMES_FR_LONG, compute_environment_statuses
 from .models import (
     ActionPlan,
+    AlertNote,
     AlertSeverity,
     AppSettings,
     AwsSizing,
@@ -1198,6 +1199,22 @@ def alert_close(alert_id):
     )
     db.session.commit()
     flash("Alerte clôturée.", "success")
+    return redirect(next_path)
+
+
+@bp.route("/alertes/<int:alert_id>/notes/add", methods=["POST"])
+def alert_note_add(alert_id):
+    alert = EnvironmentAlert.query.get_or_404(alert_id)
+    text = request.form.get("text", "").strip()
+    next_path = request.form.get("next") or url_for("main.daily_check")
+
+    if not text:
+        flash("Merci de renseigner un texte pour la note.", "error")
+        return redirect(next_path)
+
+    alert.notes.append(AlertNote(text=text))
+    db.session.commit()
+    flash("Note ajoutée.", "success")
     return redirect(next_path)
 
 

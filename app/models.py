@@ -457,9 +457,27 @@ class EnvironmentAlert(db.Model):
     closed_by = db.Column(db.String(200), nullable=True)
     resolution_notes = db.Column(db.Text, nullable=True)
 
+    notes = db.relationship(
+        "AlertNote",
+        backref="alert",
+        cascade="all, delete-orphan",
+        order_by="AlertNote.created_at",
+    )
+
     @property
     def is_open(self):
         return self.closed_at is None
+
+
+class AlertNote(db.Model):
+    """Note ajoutée au fil de l'eau sur une alerte, avant sa clôture."""
+
+    __tablename__ = "alert_notes"
+
+    id = db.Column(db.Integer, primary_key=True)
+    alert_id = db.Column(db.Integer, db.ForeignKey("environment_alerts.id"), nullable=False)
+    text = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
 
 class SupervisionLink(db.Model):
