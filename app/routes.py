@@ -125,6 +125,16 @@ def parse_float(value):
         return None
 
 
+def apply_vm_usage_fields(vm, form):
+    vm.storage_used_gb = parse_float(form.get("storage_used_gb"))
+    vm.cpu_min_15min = parse_float(form.get("cpu_min_15min"))
+    vm.cpu_max_15min = parse_float(form.get("cpu_max_15min"))
+    vm.cpu_avg = parse_float(form.get("cpu_avg"))
+    vm.ram_min_15min = parse_float(form.get("ram_min_15min"))
+    vm.ram_max_15min = parse_float(form.get("ram_max_15min"))
+    vm.ram_avg = parse_float(form.get("ram_avg"))
+
+
 def parse_date(value):
     try:
         return datetime.strptime(value, "%Y-%m-%d").date()
@@ -403,9 +413,9 @@ def vm_add(environment_id):
         return redirect(url_for("main.environment_edit", environment_id=environment.id))
 
     before = snapshot_environment(environment)
-    environment.vm_sizings.append(
-        VMSizing(name=name, role=role or None, cpu_cores=cpu_cores, ram_gb=ram_gb, storage_gb=storage_gb)
-    )
+    vm = VMSizing(name=name, role=role or None, cpu_cores=cpu_cores, ram_gb=ram_gb, storage_gb=storage_gb)
+    apply_vm_usage_fields(vm, request.form)
+    environment.vm_sizings.append(vm)
     db.session.flush()
     after = snapshot_environment(environment)
     record_sizing_operation(environment, before, after, performed_by=request.form.get("performed_by", "").strip())
@@ -437,6 +447,7 @@ def vm_edit(vm_id):
         vm.cpu_cores = cpu_cores
         vm.ram_gb = ram_gb
         vm.storage_gb = storage_gb
+        apply_vm_usage_fields(vm, request.form)
         db.session.flush()
         after = snapshot_environment(environment)
         record_sizing_operation(environment, before, after, performed_by=request.form.get("performed_by", "").strip())
@@ -1123,7 +1134,7 @@ def daily_check_ok(environment_id):
 
     if environment.open_alerts:
         flash("Impossible de confirmer RAS : une alerte est encore ouverte sur cet environnement.", "error")
-        return redirect(url_for("main.daily_check", date=check_date.isoformat()))
+        return redirect(url_for("main.daily_check", date=check_date.isoformat(), _anchor=f"env-{environment_id}"))
 
     existing = DailyCheck.query.filter_by(environment_id=environment.id, check_date=check_date).first()
     if existing:
@@ -1139,7 +1150,7 @@ def daily_check_ok(environment_id):
         )
     db.session.commit()
     flash("Vérification enregistrée : RAS.", "success")
-    return redirect(url_for("main.daily_check", date=check_date.isoformat()))
+    return redirect(url_for("main.daily_check", date=check_date.isoformat(), _anchor=f"env-{environment_id}"))
 
 
 @bp.route("/check-journalier/<int:environment_id>/alerte", methods=["POST"])
@@ -1152,7 +1163,7 @@ def daily_check_alert(environment_id):
 
     if not title or severity not in AlertSeverity.ALL:
         flash("Merci de renseigner un titre et un type d'alerte valide.", "error")
-        return redirect(url_for("main.daily_check", date=check_date.isoformat()))
+        return redirect(url_for("main.daily_check", date=check_date.isoformat(), _anchor=f"env-{environment_id}"))
 
     db.session.add(
         EnvironmentAlert(
@@ -1173,7 +1184,7 @@ def daily_check_alert(environment_id):
     )
     db.session.commit()
     flash("Alerte enregistrée.", "success")
-    return redirect(url_for("main.daily_check", date=check_date.isoformat()))
+    return redirect(url_for("main.daily_check", date=check_date.isoformat(), _anchor=f"env-{environment_id}"))
 
 
 @bp.route("/alertes/<int:alert_id>/clore", methods=["POST"])

@@ -50,7 +50,10 @@
         <div class="card" style="padding:0; overflow-x:auto;">
           <table>
             <thead>
-              <tr><th>Nom</th><th>Rôle</th><th>vCPU</th><th>RAM (Go)</th><th>Stockage (Go)</th><th></th></tr>
+              <tr>
+                <th>Nom</th><th>Rôle</th><th>vCPU</th><th>RAM (Go)</th><th>Stockage (Go)</th>
+                <th>Utilisé (stockage)</th><th>CPU min/max/moy</th><th>RAM min/max/moy (Go)</th><th></th>
+              </tr>
             </thead>
             <tbody>
               {% for vm in environment.vm_sizings %}
@@ -60,6 +63,21 @@
                   <td>{{ vm.cpu_cores }}</td>
                   <td>{{ vm.ram_gb }}</td>
                   <td>{{ vm.storage_gb }}</td>
+                  <td>{{ (vm.storage_used_gb ~ " Go") if vm.storage_used_gb is not none else "—" }}</td>
+                  <td>
+                    {% if vm.cpu_min_15min is not none or vm.cpu_max_15min is not none or vm.cpu_avg is not none %}
+                      {{ vm.cpu_min_15min if vm.cpu_min_15min is not none else "—" }} /
+                      {{ vm.cpu_max_15min if vm.cpu_max_15min is not none else "—" }} /
+                      {{ vm.cpu_avg if vm.cpu_avg is not none else "—" }}
+                    {% else %}—{% endif %}
+                  </td>
+                  <td>
+                    {% if vm.ram_min_15min is not none or vm.ram_max_15min is not none or vm.ram_avg is not none %}
+                      {{ vm.ram_min_15min if vm.ram_min_15min is not none else "—" }} /
+                      {{ vm.ram_max_15min if vm.ram_max_15min is not none else "—" }} /
+                      {{ vm.ram_avg if vm.ram_avg is not none else "—" }}
+                    {% else %}—{% endif %}
+                  </td>
                   <td>
                     <div class="actions">
                       <a class="btn btn-sm" href="{{ url_for('main.vm_edit', vm_id=vm.id) }}">Modifier</a>
@@ -71,7 +89,7 @@
                   </td>
                 </tr>
               {% else %}
-                <tr><td colspan="6" class="muted">Aucune VM renseignée.</td></tr>
+                <tr><td colspan="9" class="muted">Aucune VM renseignée.</td></tr>
               {% endfor %}
             </tbody>
           </table>
@@ -101,7 +119,42 @@
               <input type="number" id="vm_storage" name="storage_gb" min="0" step="1" required>
             </div>
           </div>
+
+          <h3 class="small" style="margin-top:14px;">Ressources utilisées (optionnel)</h3>
           <div class="field">
+            <label for="vm_storage_used_gb">Stockage utilisé (Go)</label>
+            <input type="number" id="vm_storage_used_gb" name="storage_used_gb" min="0" step="0.1">
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label for="vm_cpu_min">CPU min (15 min, vCPU)</label>
+              <input type="number" id="vm_cpu_min" name="cpu_min_15min" min="0" step="0.1">
+            </div>
+            <div class="field">
+              <label for="vm_cpu_max">CPU max (15 min, vCPU)</label>
+              <input type="number" id="vm_cpu_max" name="cpu_max_15min" min="0" step="0.1">
+            </div>
+            <div class="field">
+              <label for="vm_cpu_avg">CPU moyen (vCPU)</label>
+              <input type="number" id="vm_cpu_avg" name="cpu_avg" min="0" step="0.1">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label for="vm_ram_min">RAM min (15 min, Go)</label>
+              <input type="number" id="vm_ram_min" name="ram_min_15min" min="0" step="0.1">
+            </div>
+            <div class="field">
+              <label for="vm_ram_max">RAM max (15 min, Go)</label>
+              <input type="number" id="vm_ram_max" name="ram_max_15min" min="0" step="0.1">
+            </div>
+            <div class="field">
+              <label for="vm_ram_avg">RAM moyenne (Go)</label>
+              <input type="number" id="vm_ram_avg" name="ram_avg" min="0" step="0.1">
+            </div>
+          </div>
+
+          <div class="field" style="margin-top:10px;">
             <label for="vm_performed_by">Réalisé par</label>
             <input type="text" id="vm_performed_by" name="performed_by" placeholder="Nom de la personne">
           </div>
@@ -169,6 +222,7 @@
       {% endif %}
     </div>
 
+    {% if environment.infra_kind != infra_kinds.VM %}
     <div class="section">
       <h2>Ressources utilisées</h2>
       <p class="hint">Le provisionné est repris automatiquement du sizing ci-dessus.</p>
@@ -220,6 +274,7 @@
         </div>
       </form>
     </div>
+    {% endif %}
 
     <div class="section">
       <h2>Historique des changements de sizing</h2>

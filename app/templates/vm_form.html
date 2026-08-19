@@ -31,10 +31,51 @@
           <input type="number" id="storage_gb" name="storage_gb" min="0" step="1" required value="{{ vm.storage_gb }}">
         </div>
       </div>
+      <h3 class="small" style="margin-top:4px;">Ressources utilisées (optionnel)</h3>
       <div class="field">
+        <label for="storage_used_gb">Stockage utilisé (Go)</label>
+        <input type="number" id="storage_used_gb" name="storage_used_gb" min="0" step="0.1"
+               value="{{ vm.storage_used_gb if vm.storage_used_gb is not none else '' }}">
+      </div>
+      <div class="form-row">
+        <div class="field">
+          <label for="cpu_min_15min">CPU min (15 min, vCPU)</label>
+          <input type="number" id="cpu_min_15min" name="cpu_min_15min" min="0" step="0.1"
+                 value="{{ vm.cpu_min_15min if vm.cpu_min_15min is not none else '' }}">
+        </div>
+        <div class="field">
+          <label for="cpu_max_15min">CPU max (15 min, vCPU)</label>
+          <input type="number" id="cpu_max_15min" name="cpu_max_15min" min="0" step="0.1"
+                 value="{{ vm.cpu_max_15min if vm.cpu_max_15min is not none else '' }}">
+        </div>
+        <div class="field">
+          <label for="cpu_avg">CPU moyen (vCPU)</label>
+          <input type="number" id="cpu_avg" name="cpu_avg" min="0" step="0.1"
+                 value="{{ vm.cpu_avg if vm.cpu_avg is not none else '' }}">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="field">
+          <label for="ram_min_15min">RAM min (15 min, Go)</label>
+          <input type="number" id="ram_min_15min" name="ram_min_15min" min="0" step="0.1"
+                 value="{{ vm.ram_min_15min if vm.ram_min_15min is not none else '' }}">
+        </div>
+        <div class="field">
+          <label for="ram_max_15min">RAM max (15 min, Go)</label>
+          <input type="number" id="ram_max_15min" name="ram_max_15min" min="0" step="0.1"
+                 value="{{ vm.ram_max_15min if vm.ram_max_15min is not none else '' }}">
+        </div>
+        <div class="field">
+          <label for="ram_avg">RAM moyenne (Go)</label>
+          <input type="number" id="ram_avg" name="ram_avg" min="0" step="0.1"
+                 value="{{ vm.ram_avg if vm.ram_avg is not none else '' }}">
+        </div>
+      </div>
+
+      <div class="field" style="margin-top:10px;">
         <label for="performed_by">Réalisé par</label>
         <input type="text" id="performed_by" name="performed_by" placeholder="Nom de la personne">
-        <p class="hint">Toute modification de valeur sera tracée comme une opération « Changement de sizing » dans le journal.</p>
+        <p class="hint">Toute modification de valeur de sizing sera tracée comme une opération « Changement de sizing » dans le journal.</p>
       </div>
       <div class="actions">
         <button class="btn btn-primary" type="submit">Enregistrer</button>

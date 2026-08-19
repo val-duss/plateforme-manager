@@ -77,8 +77,45 @@
 
           {% if env.notes %}<p class="small muted">{{ env.notes }}</p>{% endif %}
 
-          {% set usage = env.resource_usage %}
-          {% if usage %}
+          {% if env.infra_kind == InfraKind.VM and env.vm_sizings %}
+            <div style="overflow-x:auto; margin-top:12px;">
+              <table>
+                <thead>
+                  <tr>
+                    <th>VM</th>
+                    <th>Stockage utilisé/provisionné</th>
+                    <th>CPU min/max/moy (provisionné)</th>
+                    <th>RAM min/max/moy (provisionné)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for vm in env.vm_sizings %}
+                    <tr>
+                      <td>{{ vm.name }}</td>
+                      <td>{{ (vm.storage_used_gb ~ " Go") if vm.storage_used_gb is not none else "—" }} / {{ vm.storage_gb }} Go</td>
+                      <td>
+                        {% if vm.cpu_min_15min is not none or vm.cpu_max_15min is not none or vm.cpu_avg is not none %}
+                          {{ vm.cpu_min_15min if vm.cpu_min_15min is not none else "—" }} /
+                          {{ vm.cpu_max_15min if vm.cpu_max_15min is not none else "—" }} /
+                          {{ vm.cpu_avg if vm.cpu_avg is not none else "—" }}
+                        {% else %}—{% endif %}
+                        ({{ vm.cpu_cores }})
+                      </td>
+                      <td>
+                        {% if vm.ram_min_15min is not none or vm.ram_max_15min is not none or vm.ram_avg is not none %}
+                          {{ vm.ram_min_15min if vm.ram_min_15min is not none else "—" }} /
+                          {{ vm.ram_max_15min if vm.ram_max_15min is not none else "—" }} /
+                          {{ vm.ram_avg if vm.ram_avg is not none else "—" }}
+                        {% else %}—{% endif %}
+                        ({{ vm.ram_gb }} Go)
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% elif env.infra_kind != InfraKind.VM and env.resource_usage %}
+            {% set usage = env.resource_usage %}
             <div style="overflow-x:auto; margin-top:12px;">
               <table>
                 <thead><tr><th></th><th>Utilisé</th><th>Provisionné</th></tr></thead>

@@ -36,7 +36,7 @@
       {% endif %}
 
       {% set check = checks_today.get(env.id) %}
-      <div class="env-block">
+      <div class="env-block" id="env-{{ env.id }}">
         <div class="env-block-head">
           <div class="tag-row">
             <span class="badge badge-{{ env.env_type }}">{{ EnvType.LABELS[env.env_type] }}</span>
@@ -66,13 +66,13 @@
               {% endif %}
 
               <form method="post" action="{{ url_for('main.alert_note_add', alert_id=alert.id) }}" class="inline-add-row">
-                <input type="hidden" name="next" value="{{ url_for('main.daily_check', date=check_date.isoformat()) }}">
+                <input type="hidden" name="next" value="{{ url_for('main.daily_check', date=check_date.isoformat(), _anchor='env-' ~ env.id) }}">
                 <input type="text" name="text" placeholder="Ajouter une note...">
                 <button type="submit" class="btn btn-sm">Ajouter</button>
               </form>
 
               <form method="post" action="{{ url_for('main.alert_close', alert_id=alert.id) }}" style="margin-top:10px;">
-                <input type="hidden" name="next" value="{{ url_for('main.daily_check', date=check_date.isoformat()) }}">
+                <input type="hidden" name="next" value="{{ url_for('main.daily_check', date=check_date.isoformat(), _anchor='env-' ~ env.id) }}">
                 <div class="field">
                   <label>Résolution</label>
                   <input type="text" name="resolution_notes" placeholder="Cause / correctif appliqué">

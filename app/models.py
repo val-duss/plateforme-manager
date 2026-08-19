@@ -178,6 +178,16 @@ class VMSizing(db.Model):
     ram_gb = db.Column(db.Float, nullable=False, default=0)
     storage_gb = db.Column(db.Float, nullable=False, default=0)
 
+    # Ressources effectivement utilisées sur cette VM (le provisionné est déjà
+    # ci-dessus : cpu_cores/ram_gb/storage_gb).
+    storage_used_gb = db.Column(db.Float, nullable=True)
+    cpu_min_15min = db.Column(db.Float, nullable=True)
+    cpu_max_15min = db.Column(db.Float, nullable=True)
+    cpu_avg = db.Column(db.Float, nullable=True)
+    ram_min_15min = db.Column(db.Float, nullable=True)
+    ram_max_15min = db.Column(db.Float, nullable=True)
+    ram_avg = db.Column(db.Float, nullable=True)
+
 
 class K8sSizing(db.Model):
     __tablename__ = "k8s_sizings"
@@ -492,10 +502,12 @@ class SupervisionLink(db.Model):
 
 
 class ResourceUsage(db.Model):
-    """Ressources effectivement utilisées sur un environnement (un instantané, mis à jour à la volée).
+    """Ressources effectivement utilisées sur un environnement K8s ou AWS (un instantané,
+    mis à jour à la volée). Pour les environnements VM, l'utilisation est suivie par
+    machine virtuelle (voir VMSizing) plutôt qu'au niveau de l'environnement.
 
     Le provisionné n'est pas dupliqué ici : il est déjà disponible via
-    Environment.sizing_summary (VM/K8s/AWS).
+    Environment.sizing_summary.
     """
 
     __tablename__ = "resource_usages"

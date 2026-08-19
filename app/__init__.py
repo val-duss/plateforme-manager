@@ -34,6 +34,15 @@ def _upgrade_schema(engine):
         "environment_alerts": {
             "severity": "VARCHAR(20) NOT NULL DEFAULT 'WARNING'",
         },
+        "vm_sizings": {
+            "storage_used_gb": "FLOAT",
+            "cpu_min_15min": "FLOAT",
+            "cpu_max_15min": "FLOAT",
+            "cpu_avg": "FLOAT",
+            "ram_min_15min": "FLOAT",
+            "ram_max_15min": "FLOAT",
+            "ram_avg": "FLOAT",
+        },
     }
     with engine.connect() as conn:
         for table, additions in table_additions.items():
